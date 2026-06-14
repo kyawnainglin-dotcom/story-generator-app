@@ -21,7 +21,7 @@ story_type = st.sidebar.selectbox(
 )
 
 # ၃။ ဘာသာစကား ရွေးချယ်မှု
-language = st.sidebar.radio("Language (ဘာသာစကား)", ["Myanmar (မြန်မာလို)", "English (အင်္ဂလိပ်လို)"])
+language = st.sidebar.radio("Language (ဘာသာစကား)", ["Myanmar (မြန်မာ)", "English (အင်္ဂလိပ်)"])
 
 st.sidebar.markdown("---")
 st.sidebar.subheader("🎨 Prompt Generation Options")
@@ -33,7 +33,7 @@ art_style = st.sidebar.selectbox(
 )
 
 # ၅။ Scene Breakdown ခွဲမည့် စက္ကန့်
-scene_every_sec = st.sidebar.number_input("Scene Breakdown (Every X Seconds)", min_value=5, max_value=60, value=10, step=5)
+scene_every_sec = st.sidebar.number_input("Scene Breakdown (Every X Seconds)", min_value=5, max_value=60, value=10, step=1)
 
 # ၆။ Image / Video Prompt ထုတ်မထုတ် Option
 get_image_prompt = st.sidebar.checkbox("Generate Image Prompts", value=True)
