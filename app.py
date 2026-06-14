@@ -32,7 +32,7 @@ art_style = st.sidebar.selectbox(
 )
 
 # ၅။ Scene Breakdown ခွဲမည့် စက္ကန့်
-scene_every_sec = st.sidebar.number_input("Scene Breakdown (Every X Seconds)", min_value=5, max_value=60, value=10, step=5)
+scene_every_sec = st.sidebar.number_input("Scene Breakdown (Every X Seconds)", min_value=5, max_value=60, value=10, step=1)
 
 # ၆။ Image / Video Prompt ထုတ်မထုတ် Option
 get_image_prompt = st.sidebar.checkbox("Generate Image Prompts", value=True)
@@ -53,7 +53,7 @@ if st.button("Generate Master Script & Prompts ✨"):
     else:
         try:
             genai.configure(api_key=user_api_key)
-            model = genai.GenerativeModel('gemini-1.5-pro') # ပိုကောင်းပြီး အရှည်ကြီး ထုတ်နိုင်တဲ့ Model ပြောင်းသုံးထားပါတယ်
+            model = genai.GenerativeModel('gemini-2.5-pro') # ပိုကောင်းပြီး အရှည်ကြီး ထုတ်နိုင်တဲ့ Model ပြောင်းသုံးထားပါတယ်
             
             # ခန့်မှန်း Scene အရေအတွက် တွက်ချက်ခြင်း
             total_seconds = (duration_min * 60) + duration_sec
