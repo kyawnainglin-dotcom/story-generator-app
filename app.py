@@ -5,12 +5,12 @@ import random
 # --- Page Config ---
 st.set_page_config(page_title="AI Storyboard & Script Generator", layout="wide")
 
-# --- Custom CSS for Bright Photo Background & Matched Typography ---
+# --- Custom CSS for Subtle Bright UI & Perfect Contrast ---
 st.markdown("""
     <style>
-        /* 1. Bright & Elegant Cinematic Background Photo */
+        /* 1. Background Photo with Subtle Mask (0.3 opacity for photo clarity) */
         .stApp {
-            background: linear-gradient(rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0.75)), 
+            background: linear-gradient(rgba(248, 250, 252, 0.3), rgba(248, 250, 252, 0.3)), 
                         url('https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80');
             background-size: cover;
             background-position: center;
@@ -20,26 +20,26 @@ st.markdown("""
         /* 2. Top 30% Spacing for Content */
         .main-content { padding-top: 30vh; }
         
-        /* 3. Deep and High-Contrast Typography for Main Page */
+        /* 3. Deep Typography (Dark Slate/Navy) for Main Page */
         h1 { color: #0f172a !important; text-align: center; font-family: 'Helvetica Neue', sans-serif; font-weight: 800; letter-spacing: 1px; margin-bottom: 5px; }
         .sub-text { text-align: center; color: #334155; font-size: 16px; margin-bottom: 25px; letter-spacing: 0.5px; font-weight: 600; }
         
-        /* 4. Text Input Field Box Style */
+        /* 4. Text Input Field Box (Smoke White / Soft Translucent) */
         .stTextInput > div > div > input {
             border-radius: 12px;
-            background-color: rgba(255, 255, 255, 0.95);
+            background-color: rgba(248, 250, 252, 0.85);
             color: #0f172a;
-            border: 2px solid #334155;
+            border: 2px solid #64748b;
             padding: 14px 20px;
             font-size: 16px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.03);
         }
         .stTextInput > div > div > input:focus {
             border: 2px solid #1e40af;
-            box-shadow: 0 0 10px rgba(30, 64, 175, 0.3);
+            box-shadow: 0 0 10px rgba(30, 64, 175, 0.2);
         }
         
-        /* 5. Perfect Full-Width Generate Button */
+        /* 5. Perfect Full-Width Generate Button with Deep Theme Color */
         div.stButton > button {
             background: linear-gradient(45deg, #0f172a, #1e40af);
             color: white !important;
@@ -47,40 +47,39 @@ st.markdown("""
             font-size: 16px;
             border-radius: 25px;
             width: 100% !important;
-            min-width: 25px;
             border: none;
             padding: 12px 30px !important;
             display: block;
             margin: 0 auto;
             transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(15, 23, 42, 0.2);
+            box-shadow: 0 4px 15px rgba(15, 23, 42, 0.15);
         }
         div.stButton > button:hover {
-            background: linear-gradient(45deg, #2563eb, #3b82f6);
+            background: linear-gradient(45deg, #1e40af, #2563eb);
             color: white !important;
-            box-shadow: 0 4px 20px rgba(37, 99, 235, 0.4);
+            box-shadow: 0 4px 20px rgba(37, 99, 235, 0.3);
             transform: translateY(-2px);
         }
         
-        /* 6. Navigation Bar / Sidebar Panel with Matching Color Scheme */
+        /* 6. Navigation Bar / Sidebar Panel (Soft Smoke Gray) */
         [data-testid="stSidebar"] {
-            background-color: #f1f5f9 !important; /* Soft Slate Gray/White */
+            background-color: #f1f5f9 !important; 
             border-right: 1px solid #cbd5e1;
         }
         
-        /* Adjusting Sidebar Font and Elements Colors */
+        /* Adjusting Sidebar Font and Elements Colors for Contrast */
         [data-testid="stSidebar"] .stMarkdown h2 { color: #0f172a !important; font-weight: bold; }
-        [data-testid="stSidebar"] label { color: #1e293b !important; font-weight: 600 !important; }
+        [data-testid="stSidebar"] label { color: #334155 !important; font-weight: 600 !important; }
         [data-testid="stSidebar"] .stRadio div { color: #0f172a !important; }
         
         /* 7. Output Story Display Box (Font 14 & 12) */
         .story-container {
-            background-color: rgba(255, 255, 255, 0.95);
+            background-color: rgba(248, 250, 252, 0.9);
             padding: 35px;
             border-radius: 16px;
             border: 1px solid #cbd5e1;
             margin-top: 40px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
         }
         .story-title-style { 
             font-size: 14pt !important; 
@@ -97,16 +96,16 @@ st.markdown("""
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         
-        /* Inner markdown text formatting */
+        /* Inner markdown formatting */
         .story-body-style h2, .story-body-style h3 { color: #2563eb; font-size: 13pt; margin-top: 25px; }
     </style>
 """, unsafe_allow_html=True)
 
 
-# --- ⚙️ Sidebar Navigation Settings ---
+# --- ⚙️ Sidebar Navigation Settings (ALL Features Included) ---
 st.sidebar.markdown("<h2 style='font-size: 20px;'>⚙️ Settings</h2>", unsafe_allow_html=True)
 
-# 1. Output Story Language Selection (Myanmar or English)
+# 1. Output Story Language Selection
 story_language = st.sidebar.radio(
     "Story Language (Output)",
     ["Myanmar", "English"]
@@ -131,7 +130,7 @@ art_style = st.sidebar.selectbox(
 )
 
 # 5. Scene Breakdown Settings
-scene_every_sec = st.sidebar.number_input("Scene Breakdown (Every X Seconds)", min_value=5, max_value=60, value=10, step=5)
+scene_every_sec = st.sidebar.number_input("Scene Breakdown (Every X Seconds)", min_value=1, max_value=60, value=10, step=1)
 
 # 6. Conditional Feature Toggles
 get_image_prompt = st.sidebar.checkbox("Generate Image Prompts", value=True)
@@ -167,7 +166,7 @@ if st.button("Generate"):
             }
             
             model = genai.GenerativeModel(
-                model_name='gemini-2.5-flash',
+                model_name='gemini-1.5-flash',
                 generation_config=generation_config
             )
             
