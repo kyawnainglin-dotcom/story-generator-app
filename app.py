@@ -155,7 +155,7 @@ st.title("Storyboard Script Generator")
 st.markdown("<div class='sub-text'>Create the best story here</div>", unsafe_allow_html=True)
 
 # Prompt Text Area Box
-story_concept = st.text_input("", placeholder="ဇတ်လမ်းရေးရန်")
+story_concept = st.text_input("", placeholder="Type your story")
 
 # Render Engine Trigger Controller
 if st.button("Generate"):
