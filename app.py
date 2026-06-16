@@ -132,7 +132,7 @@ art_style = st.sidebar.selectbox(
 )
 
 # 5. Production Pace Configuration
-scene_every_sec = st.sidebar.number_input("Scene Breakdown (Every X Seconds)", min_value=5, max_value=60, value=10, step=5)
+scene_every_sec = st.sidebar.number_input("Scene Breakdown (Every X Seconds)", min_value=1, max_value=60, value=10, step=1)
 
 # 6. Technical Framework Output Selectors (Color Fixed)
 get_image_prompt = st.sidebar.checkbox("Generate Image Prompts", value=True)
