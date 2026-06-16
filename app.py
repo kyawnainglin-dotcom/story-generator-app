@@ -10,7 +10,7 @@ st.markdown("""
     <style>
         /* 1. Raw Background Photo (NO MASK) - High Clarity */
         .stApp {
-            background-image: url('https://pixabay.com/images/download/x-2739115_1920.jpg');
+            background-image: url('https://www.un.org/sites/un2.un.org/files/2020/01/the-floating-gardens-of-lake-inle.jpg');
             background-size: cover;
             background-position: center;
             background-attachment: fixed;
