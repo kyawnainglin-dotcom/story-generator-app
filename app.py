@@ -10,7 +10,7 @@ st.markdown("""
     <style>
         /* 1. Raw Background Photo (NO MASK) - High Clarity */
         .stApp {
-            background-image: url('https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80');
+            background-image: url('https://wallpapercave.com/wp/wp4469519.jpg');
             background-size: cover;
             background-position: center;
             background-attachment: fixed;
