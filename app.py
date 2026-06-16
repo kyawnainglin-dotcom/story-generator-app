@@ -5,12 +5,13 @@ import random
 # --- Page Config ---
 st.set_page_config(page_title="AI Storyboard & Script Generator", layout="wide")
 
-# --- Custom CSS for Light Professional UI ---
+# --- Custom CSS for Bright Photo Background & Matched Typography ---
 st.markdown("""
     <style>
-        /* 1. Clean & Bright Light Background */
+        /* 1. Bright & Elegant Cinematic Background Photo */
         .stApp {
-            background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%);
+            background: linear-gradient(rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0.75)), 
+                        url('https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80');
             background-size: cover;
             background-position: center;
             background-attachment: fixed;
@@ -19,74 +20,79 @@ st.markdown("""
         /* 2. Top 30% Spacing for Content */
         .main-content { padding-top: 30vh; }
         
-        /* 3. Clean Typography & Heading (Light Mode) */
-        h1 { color: #1e3a8a; text-align: center; font-family: 'Helvetica Neue', sans-serif; font-weight: 800; letter-spacing: 1px; margin-bottom: 5px; }
-        .sub-text { text-align: center; color: #4b5563; font-size: 15px; margin-bottom: 25px; letter-spacing: 0.5px; font-weight: 500; }
+        /* 3. Deep and High-Contrast Typography for Main Page */
+        h1 { color: #0f172a !important; text-align: center; font-family: 'Helvetica Neue', sans-serif; font-weight: 800; letter-spacing: 1px; margin-bottom: 5px; }
+        .sub-text { text-align: center; color: #334155; font-size: 16px; margin-bottom: 25px; letter-spacing: 0.5px; font-weight: 600; }
         
-        /* 4. Text Input Field Box (Light Mode Style) */
+        /* 4. Text Input Field Box Style */
         .stTextInput > div > div > input {
             border-radius: 12px;
-            background-color: rgba(255, 255, 255, 0.9);
-            color: #1f2937;
-            border: 2px solid #1e3a8a;
+            background-color: rgba(255, 255, 255, 0.95);
+            color: #0f172a;
+            border: 2px solid #334155;
             padding: 14px 20px;
             font-size: 16px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
         }
         .stTextInput > div > div > input:focus {
-            border: 2px solid #3b82f6;
-            box-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
+            border: 2px solid #1e40af;
+            box-shadow: 0 0 10px rgba(30, 64, 175, 0.3);
         }
         
-        /* 5. Perfect Full-Width Generate Button with No Text Clipping */
+        /* 5. Perfect Full-Width Generate Button */
         div.stButton > button {
-            background: linear-gradient(45deg, #1e3a8a, #3b82f6);
+            background: linear-gradient(45deg, #0f172a, #1e40af);
             color: white !important;
             font-weight: bold;
             font-size: 16px;
             border-radius: 25px;
-            width: 100% !important; /* Forces it to occupy full layout width */
-            min-width: 200px;       /* Ensures it never shrinks too small */
+            width: 100% !important;
+            min-width: 25px;
             border: none;
-            padding: 12px 30px !important; /* Extra padding inside to give text space */
+            padding: 12px 30px !important;
             display: block;
             margin: 0 auto;
             transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(30, 58, 138, 0.2);
+            box-shadow: 0 4px 15px rgba(15, 23, 42, 0.2);
         }
         div.stButton > button:hover {
-            background: linear-gradient(45deg, #2563eb, #60a5fa);
+            background: linear-gradient(45deg, #2563eb, #3b82f6);
             color: white !important;
             box-shadow: 0 4px 20px rgba(37, 99, 235, 0.4);
             transform: translateY(-2px);
         }
         
-        /* 6. Clean Sidebar Panel for Light Mode */
+        /* 6. Navigation Bar / Sidebar Panel with Matching Color Scheme */
         [data-testid="stSidebar"] {
-            background-color: #ffffff !important;
-            border-right: 1px solid #e5e7eb;
+            background-color: #f1f5f9 !important; /* Soft Slate Gray/White */
+            border-right: 1px solid #cbd5e1;
         }
         
-        /* 7. Output Story Display Box (Light Mode - Font 14 & 12) */
+        /* Adjusting Sidebar Font and Elements Colors */
+        [data-testid="stSidebar"] .stMarkdown h2 { color: #0f172a !important; font-weight: bold; }
+        [data-testid="stSidebar"] label { color: #1e293b !important; font-weight: 600 !important; }
+        [data-testid="stSidebar"] .stRadio div { color: #0f172a !important; }
+        
+        /* 7. Output Story Display Box (Font 14 & 12) */
         .story-container {
-            background-color: #ffffff;
+            background-color: rgba(255, 255, 255, 0.95);
             padding: 35px;
             border-radius: 16px;
-            border: 1px solid #e5e7eb;
+            border: 1px solid #cbd5e1;
             margin-top: 40px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
         }
         .story-title-style { 
             font-size: 14pt !important; 
-            color: #1e3a8a !important; 
+            color: #1e40af !important; 
             font-weight: bold !important; 
             margin-bottom: 15px;
-            border-bottom: 2px solid #f3f4f6;
+            border-bottom: 2px solid #e2e8f0;
             padding-bottom: 10px;
         }
         .story-body-style { 
             font-size: 12pt !important; 
-            color: #374151 !important; 
+            color: #0f172a !important; 
             line-height: 1.8 !important; 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
@@ -97,10 +103,10 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
-# --- ⚙️ Sidebar Production Settings ---
-st.sidebar.markdown("<h2 style='color: #1e3a8a; font-size: 20px; font-weight: bold;'>⚙️ Settings</h2>", unsafe_allow_html=True)
+# --- ⚙️ Sidebar Navigation Settings ---
+st.sidebar.markdown("<h2 style='font-size: 20px;'>⚙️ Settings</h2>", unsafe_allow_html=True)
 
-# 1. Output Story Language
+# 1. Output Story Language Selection (Myanmar or English)
 story_language = st.sidebar.radio(
     "Story Language (Output)",
     ["Myanmar", "English"]
