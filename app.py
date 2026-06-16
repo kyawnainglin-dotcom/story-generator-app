@@ -34,6 +34,11 @@ st.markdown("""
             font-weight: 500;
             box-shadow: 0 4px 10px rgba(0,0,0,0.05);
         }
+        /* 🎯 ဤနေရာတွင် အောက်က ကုဒ် ၃ စုကို ထပ်တိုးပေးပါ (Placeholder အရောင် ပြောင်းနည်း) */
+        .stTextInput > div > div > input::placeholder {
+            color: #475569 !important; /* စာလုံးကို မီးခိုးရောင်ရင့်ရင့် ပြောင်းတာပါ */
+            opacity: 1 !important;     /* မှိန်မသွားဘဲ စာသား အပြည့်အဝ ပေါ်နေစေဖို့ပါ */
+        }
         .stTextInput > div > div > input:focus {
             border: 2px solid #1e40af;
             box-shadow: 0 0 12px rgba(30, 64, 175, 0.25);
