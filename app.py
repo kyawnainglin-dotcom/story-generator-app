@@ -10,7 +10,7 @@ st.markdown("""
     <style>
         /* 1. Raw Background Photo (NO MASK) - High Clarity */
         .stApp {
-            background-image: url('https://pixabay.com/images/download/tieubaotruong-field-9295186_1920.jpg');
+            background-image: url('https://pixabay.com/photos/field-nature-sunlight-9295186/');
             background-size: cover;
             background-position: center;
             background-attachment: fixed;
