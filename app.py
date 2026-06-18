@@ -34,13 +34,10 @@ st.markdown("""
             font-weight: 600;
             box-shadow: 0 4px 10px rgba(0,0,0,0.05);
         }
-        
-        /* "ဇတ်လမ်းရေးရန်" Placeholder Text Color Styling inside CSS */
         .stTextInput > div > div > input::placeholder {
             color: #475569 !important;
             opacity: 1 !important;
         }
-        
         .stTextInput > div > div > input:focus {
             border: 2px solid #1e40af;
             box-shadow: 0 0 12px rgba(30, 64, 175, 0.25);
@@ -105,7 +102,7 @@ story_language = st.sidebar.radio(
 
 st.sidebar.markdown("<hr style='border-color: #1e293b;'/>", unsafe_allow_html=True)
 
-# 🎯 Target Duration Sliders (ထည့်သွင်းပေးလိုက်သည့် Feature သစ်)
+# Target Duration Sliders
 st.sidebar.markdown("<label>Target Video Duration</label>", unsafe_allow_html=True)
 duration_min = st.sidebar.slider("Minutes", 0, 10, 1)
 duration_sec = st.sidebar.slider("Seconds", 0, 50, 0, step=10)
@@ -149,7 +146,7 @@ if st.button("Generate Production Board"):
             genai.configure(api_key=user_api_key)
             
             generation_config = {
-                "temperature": 0.9, 
+                "temperature": 0.85, 
                 "top_p": 0.95,
                 "top_k": 40,
             }
@@ -162,35 +159,39 @@ if st.button("Generate Production Board"):
             total_seconds = (duration_min * 60) + duration_sec
             random_seed = random.randint(1, 100000)
             
-            # Master Prompt with Target Duration Input Integrated
+            # 🧠 Advanced Film Director & Disney-style Shot Multi-Splitter Prompt
             command = f"""
-            You are a professional film director and veteran scriptwriter. 
-            Analyze the concept provided and breakdown the story into a technical production-ready shooting script. (Seed: {random_seed})
+            You are a world-class Film Director and Animation Storyboard Artist from Disney and Pixar.
+            Analyze the concept and create a highly professional shooting script broken down into structural Scenes, and sub-divided into independent cinematic SHOTS. (Seed: {random_seed})
             
             [Specifications]
-            1. Target Video Duration: Total of {duration_min} minutes and {duration_sec} seconds (Exactly {total_seconds} seconds long).
+            1. Target Video Duration: {duration_min} minutes and {duration_sec} seconds (Total: {total_seconds} seconds).
             2. Genre: {story_type}
-            3. Main Language: Output the script, actions, and narration texts in {story_language} language. Technical AI prompts must remain in English.
-            4. Core Concept: '{story_concept}'
+            3. Main Language: Script narrative and action lines must be written in {story_language}. Technical AI prompts must be in English.
+            4. Plot Concept: '{story_concept}'
             
-            [Strict Director Rules for Breakdown]
-            - First, write a complete cinematic **SCRIPT & STORY** text overview in {story_language} that spans the target duration.
-            - Based on that script, break it down logically into chronological **SCENES** to cover the total {total_seconds} seconds.
-            - For each Scene, act like an editor and determine dynamic timing cuts. Assign precise durations like 2sec, 3sec, 4sec, 5sec, 6sec, or 7sec dynamically based on how fast or detailed the action inside the script is.
-            - Inside each scene block, provide:
-              * Scene Number & Dynamic Cut Duration (e.g., Scene 1 [Duration: 5 Seconds])
-              * Action Lines / Narration (In {story_language})
+            [Strict Director's Multi-Shot Breakdown Rules]
+            - First, output a high-level **SCRIPT & STORY** text overview in {story_language}.
+            - Next, break the master story down into broad **SCENES** based on locations (e.g., Scene 1: Living Room, Scene 2: Dark Forest).
+            - [CRITICAL] Inside EACH SCENE, you must break it down into MULTIPLE separate **SHOTS** (just like Disney animation pacing). 
+            - Each SHOT must be assigned a random dynamic pacing cut of either 3sec, 4sec, 5sec, 6sec, or 7sec. Cumulative shot times should target the total video length.
+            
+            [Output Format Structure for each Scene block]
+            Write: "🎬 SCENE [Number]: [Location Name] - [Time of Day]"
+            Then list the multiple shots inside it:
+              * SHOT [Scene Number].[Shot Number] (e.g., SHOT 1.1) - [Duration: X Seconds (Choose between 3s to 7s)]
+              * Action / Character Dialogue: (Written in {story_language} detailing what happens in this specific 3-7s snippet)
             """
             
             if get_image_prompt:
-                command += f"\n              * Image Prompt: Generate a detailed Midjourney text prompt in English. Establish clear asset placement, subject position, and environmental frameworks. Include aspect ratio '--ar {image_ratio}' and visual profile style '{art_style}'."
+                command += f"\n              * Image Prompt: Detailed Midjourney text prompt in English matching visual style '{art_style}' with aspect ratio '--ar {image_ratio}'. Set exact spatial positions of characters/objects (e.g., 'On the left side...')."
               
             if get_video_prompt:
-                command += "\n              * Video Prompt & Direction: Create a dynamic generative video model prompt in English (for Sora/Runway) that is STAGE-SYNCHRONIZED with the Image Prompt above. [CRITICAL RULE] You must ensure absolute spatial consistency. If the Image Prompt places an object/subject on the left/right, the Video Prompt direction MUST honor that layout and build camera trajectories or actions relative to that specific spot. Define precise camera movements."
+                command += "\n              * Video Prompt & Direction: Dynamic generative video prompt (Sora/Runway) in English. Must maintain 100% spatial alignment with the Image Prompt above. If the subject is on the left in the image, camera/action directions must reference the left side. Specify camera techniques (Pan, Zoom, Dolly, Close-up, Wide)."
                 
-            command += "\n\nFormat the output neatly with clear markings so the user can edit or review comfortably."
+            command += "\n\nFormat the output beautifully and structurally so the user can easily review or edit."
             
-            with st.spinner("⚡ Director AI is orchestrating your shots, timing cuts, and prompt synchronization..."):
+            with st.spinner("⚡ Disney-Style Shot Multi-Splitter Engine is producing your master board..."):
                 response = model.generate_content(command)
                 st.session_state.generated_script = response.text
                 
