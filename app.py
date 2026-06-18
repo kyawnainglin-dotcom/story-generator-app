@@ -3,7 +3,7 @@ import google.generativeai as genai
 import random
 
 # --- Page Config ---
-st.set_page_config(page_title="AI Director Shot-List & Script Generator", layout="wide")
+st.set_page_config(page_title="AI Director Master Shot-List Studio", layout="wide")
 
 # --- Custom CSS for Premium Visuals, Clean Contrast & Full Width Buttons ---
 st.markdown("""
@@ -109,6 +109,17 @@ duration_sec = st.sidebar.slider("Seconds", 0, 50, 0, step=10)
 
 st.sidebar.markdown("<hr style='border-color: #1e293b;'/>", unsafe_allow_html=True)
 
+# 🎯 Feature 1: Character Profiles for Consistency (ထည့်သွင်းပေးလိုက်သည့် Feature သစ်)
+st.sidebar.markdown("<label>🎭 Character Reference Profile</label>", unsafe_allow_html=True)
+char_profile = st.sidebar.text_area(
+    label="Character Description",
+    placeholder="ဥပမာ- 'မင်းသား: အသက် ၂၅ နှစ်ခန့်၊ ဆံပင်အညိုကောက်ကောက်၊ ဂျင်းဂျာကင်အပြာ ဝတ်ဆင်ထားသည်။'",
+    height=80,
+    label_visibility="collapsed"
+)
+
+st.sidebar.markdown("<hr style='border-color: #1e293b;'/>", unsafe_allow_html=True)
+
 story_type = st.sidebar.selectbox(
     "Genre / Story Type",
     ["Drama", "Horror", "Romance", "Fantasy", "Sci-Fi", "Comedy", "Action"]
@@ -159,39 +170,43 @@ if st.button("Generate Production Board"):
             total_seconds = (duration_min * 60) + duration_sec
             random_seed = random.randint(1, 100000)
             
-            # 🧠 Advanced Film Director & Disney-style Shot Multi-Splitter Prompt
+            # 🧠 Highly Optimized Professional Director & Character Profile Synchronization Engine
             command = f"""
-            You are a world-class Film Director and Animation Storyboard Artist from Disney and Pixar.
-            Analyze the concept and create a highly professional shooting script broken down into structural Scenes, and sub-divided into independent cinematic SHOTS. (Seed: {random_seed})
+            You are a world-class Film Director, Sound Designer, and Animation Storyboard Artist from Disney and Pixar.
+            Analyze the concept and create a highly professional shooting script broken down into structural Scenes, and sub-divided into independent cinematic SHOTS with full audio-visual prompt layers. (Seed: {random_seed})
             
             [Specifications]
             1. Target Video Duration: {duration_min} minutes and {duration_sec} seconds (Total: {total_seconds} seconds).
             2. Genre: {story_type}
-            3. Main Language: Script narrative and action lines must be written in {story_language}. Technical AI prompts must be in English.
+            3. Main Language: Script narrative and action lines must be written in {story_language}. Technical AI prompts (Image, Video, Sound) must be in English.
             4. Plot Concept: '{story_concept}'
+            5. Character Reference Profile (Maintain strict visual consistency): '{char_profile if char_profile else "Automatically define unique character visuals and keep them identical across all prompts."}'
             
             [Strict Director's Multi-Shot Breakdown Rules]
             - First, output a high-level **SCRIPT & STORY** text overview in {story_language}.
-            - Next, break the master story down into broad **SCENES** based on locations (e.g., Scene 1: Living Room, Scene 2: Dark Forest).
-            - [CRITICAL] Inside EACH SCENE, you must break it down into MULTIPLE separate **SHOTS** (just like Disney animation pacing). 
+            - Next, break the master story down into broad **SCENES** based on locations.
+            - Inside EACH SCENE, you must break it down into MULTIPLE separate **SHOTS** (Disney animation pacing). 
             - Each SHOT must be assigned a random dynamic pacing cut of either 3sec, 4sec, 5sec, 6sec, or 7sec. Cumulative shot times should target the total video length.
             
             [Output Format Structure for each Scene block]
             Write: "🎬 SCENE [Number]: [Location Name] - [Time of Day]"
             Then list the multiple shots inside it:
-              * SHOT [Scene Number].[Shot Number] (e.g., SHOT 1.1) - [Duration: X Seconds (Choose between 3s to 7s)]
-              * Action / Character Dialogue: (Written in {story_language} detailing what happens in this specific 3-7s snippet)
+              * SHOT [Scene Number].[Shot Number] (e.g., SHOT 1.1) - [Duration: X Seconds (3s to 7s)]
+              * Camera Shot Type: (Dynamically choose appropriate types like: Close-up, Wide Shot, Extreme Close-up, Medium Shot, Low-Angle Shot, Over-the-shoulder)
+              * Action / Character Dialogue: (Written in {story_language} detailing what happens in this 3-7s snippet, maintaining character identity)
             """
             
             if get_image_prompt:
-                command += f"\n              * Image Prompt: Detailed Midjourney text prompt in English matching visual style '{art_style}' with aspect ratio '--ar {image_ratio}'. Set exact spatial positions of characters/objects (e.g., 'On the left side...')."
+                command += f"\n              * Image Prompt: Detailed Midjourney text prompt in English matching visual style '{art_style}' with aspect ratio '--ar {image_ratio}'. You MUST inject the character reference profile rules explicitly into this text prompt to maintain visual consistency. Set exact spatial positions of characters/objects (e.g., 'On the left side...'). Specify lighting conditions matching the mood."
               
             if get_video_prompt:
-                command += "\n              * Video Prompt & Direction: Dynamic generative video prompt (Sora/Runway) in English. Must maintain 100% spatial alignment with the Image Prompt above. If the subject is on the left in the image, camera/action directions must reference the left side. Specify camera techniques (Pan, Zoom, Dolly, Close-up, Wide)."
+                command += "\n              * Video Prompt & Direction: Dynamic generative video prompt (Sora/Runway) in English. Must maintain 100% spatial alignment with the Image Prompt above. If the subject is on the left in the image, camera/action directions must reference the left side. Specify precise camera movements corresponding to the Camera Shot Type."
+                
+            command += "\n              * Sound Style & Music Mood: Generate descriptive SFX (Sound Effects), ambient audio profiles, and cinematic orchestral background music cues in English suitable for professional sound matching."
                 
             command += "\n\nFormat the output beautifully and structurally so the user can easily review or edit."
             
-            with st.spinner("⚡ Disney-Style Shot Multi-Splitter Engine is producing your master board..."):
+            with st.spinner("⚡ Ultimate Director Engine is syncing characters, shots, and sound design..."):
                 response = model.generate_content(command)
                 st.session_state.generated_script = response.text
                 
