@@ -214,7 +214,8 @@ if st.session_state.generated_script:
         mime="text/plain"
     )
 
-st.markdown("</div>", unsafe_allow_html=True)        /* 🎯 ဤနေရာတွင် အောက်က ကုဒ် ၃ စုကို ထပ်တိုးပေးပါ (Placeholder အရောင် ပြောင်းနည်း) */
+    st.markdown("</div>", unsafe_allow_html=True)       
+    /* 🎯 ဤနေရာတွင် အောက်က ကုဒ် ၃ စုကို ထပ်တိုးပေးပါ (Placeholder အရောင် ပြောင်းနည်း) */
         .stTextInput > div > div > input::placeholder {
             color: #A9A9A9 !important; /* စာလုံးကို မီးခိုးရောင်ရင့်ရင့် ပြောင်းတာပါ */
             opacity: 1 !important;     /* မှိန်မသွားဘဲ စာသား အပြည့်အဝ ပေါ်နေစေဖို့ပါ */
