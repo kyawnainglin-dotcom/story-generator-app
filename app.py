@@ -105,6 +105,13 @@ story_language = st.sidebar.radio(
 
 st.sidebar.markdown("<hr style='border-color: #1e293b;'/>", unsafe_allow_html=True)
 
+# 🎯 Target Duration Sliders (ထည့်သွင်းပေးလိုက်သည့် Feature သစ်)
+st.sidebar.markdown("<label>Target Video Duration</label>", unsafe_allow_html=True)
+duration_min = st.sidebar.slider("Minutes", 0, 10, 1)
+duration_sec = st.sidebar.slider("Seconds", 0, 50, 0, step=10)
+
+st.sidebar.markdown("<hr style='border-color: #1e293b;'/>", unsafe_allow_html=True)
+
 story_type = st.sidebar.selectbox(
     "Genre / Story Type",
     ["Drama", "Horror", "Romance", "Fantasy", "Sci-Fi", "Comedy", "Action"]
@@ -152,23 +159,26 @@ if st.button("Generate Production Board"):
                 generation_config=generation_config
             )
             
+            total_seconds = (duration_min * 60) + duration_sec
             random_seed = random.randint(1, 100000)
             
+            # Master Prompt with Target Duration Input Integrated
             command = f"""
             You are a professional film director and veteran scriptwriter. 
             Analyze the concept provided and breakdown the story into a technical production-ready shooting script. (Seed: {random_seed})
             
             [Specifications]
-            1. Genre: {story_type}
-            2. Main Language: Output the script, actions, and narration texts in {story_language} language. Technical AI prompts must remain in English.
-            3. Core Concept: '{story_concept}'
+            1. Target Video Duration: Total of {duration_min} minutes and {duration_sec} seconds (Exactly {total_seconds} seconds long).
+            2. Genre: {story_type}
+            3. Main Language: Output the script, actions, and narration texts in {story_language} language. Technical AI prompts must remain in English.
+            4. Core Concept: '{story_concept}'
             
             [Strict Director Rules for Breakdown]
-            - First, write a complete cinematic **SCRIPT & STORY** text overview in {story_language}.
-            - Based on that script, break it down logically into chronological **SCENES**.
-            - For each Scene, determine dynamic timing cuts. Assign precise durations like 2sec, 3sec, 4sec, 5sec, 6sec, or 7sec dynamically based on how fast or detailed the action inside the script is.
+            - First, write a complete cinematic **SCRIPT & STORY** text overview in {story_language} that spans the target duration.
+            - Based on that script, break it down logically into chronological **SCENES** to cover the total {total_seconds} seconds.
+            - For each Scene, act like an editor and determine dynamic timing cuts. Assign precise durations like 2sec, 3sec, 4sec, 5sec, 6sec, or 7sec dynamically based on how fast or detailed the action inside the script is.
             - Inside each scene block, provide:
-              * Scene Number & Dynamic Cut Duration (e.g., Scene 1 [Duration: 4 Seconds])
+              * Scene Number & Dynamic Cut Duration (e.g., Scene 1 [Duration: 5 Seconds])
               * Action Lines / Narration (In {story_language})
             """
             
