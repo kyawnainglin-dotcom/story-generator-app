@@ -10,7 +10,7 @@ st.markdown("""
     <style>
         /* 1. Raw Background Photo (NO MASK) - High Clarity */
         .stApp {
-            background-image: url('https://wallpaperaccess.com/full/288747.jpg');
+            background-image: url('https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80');
             background-size: cover;
             background-position: center;
             background-attachment: fixed;
@@ -109,7 +109,7 @@ duration_sec = st.sidebar.slider("Seconds", 0, 50, 0, step=10)
 
 st.sidebar.markdown("<hr style='border-color: #1e293b;'/>", unsafe_allow_html=True)
 
-# 🎯 Feature 1: Character Profiles for Consistency (ထည့်သွင်းပေးလိုက်သည့် Feature သစ်)
+# 🎭 Character Reference Profile (ဇာတ်ကောင် တည်ငြိမ်မှုအတွက်)
 st.sidebar.markdown("<label>🎭 Character Reference Profile</label>", unsafe_allow_html=True)
 char_profile = st.sidebar.text_area(
     label="Character Description",
@@ -170,43 +170,48 @@ if st.button("Generate Production Board"):
             total_seconds = (duration_min * 60) + duration_sec
             random_seed = random.randint(1, 100000)
             
-            # 🧠 Highly Optimized Professional Director & Character Profile Synchronization Engine
+            # 🧠 Dynamic Script, Dialogue, Variable Pacing & Sound System All-In-One Prompt
             command = f"""
-            You are a world-class Film Director, Sound Designer, and Animation Storyboard Artist from Disney and Pixar.
-            Analyze the concept and create a highly professional shooting script broken down into structural Scenes, and sub-divided into independent cinematic SHOTS with full audio-visual prompt layers. (Seed: {random_seed})
+            You are a Legendary Screenplay Writer, Hollywood Film Director, and Disney Animation Storyboard Artist.
+            Analyze the concept and write an epic cinematic shooting script broken down into structural Scenes, and sub-divided into independent cinematic SHOTS. (Seed: {random_seed})
             
             [Specifications]
             1. Target Video Duration: {duration_min} minutes and {duration_sec} seconds (Total: {total_seconds} seconds).
             2. Genre: {story_type}
-            3. Main Language: Script narrative and action lines must be written in {story_language}. Technical AI prompts (Image, Video, Sound) must be in English.
+            3. Main Language: Narration, Script storylines, Actions, and Dialogue text blocks MUST be written beautifully in {story_language}. Technical AI prompts (Image, Video, Sound) must remain in English.
             4. Plot Concept: '{story_concept}'
-            5. Character Reference Profile (Maintain strict visual consistency): '{char_profile if char_profile else "Automatically define unique character visuals and keep them identical across all prompts."}'
+            5. Character Reference Profile: '{char_profile if char_profile else "Automatically define unique character visuals and keep them identical across all prompts."}'
             
-            [Strict Director's Multi-Shot Breakdown Rules]
+            [Strict Director's Dynamic Pacing Rules]
             - First, output a high-level **SCRIPT & STORY** text overview in {story_language}.
-            - Next, break the master story down into broad **SCENES** based on locations.
-            - Inside EACH SCENE, you must break it down into MULTIPLE separate **SHOTS** (Disney animation pacing). 
-            - Each SHOT must be assigned a random dynamic pacing cut of either 3sec, 4sec, 5sec, 6sec, or 7sec. Cumulative shot times should target the total video length.
+            - Next, break the story down into broad **SCENES** based on locations.
+            - Inside EACH SCENE, break it down into MULTIPLE separate shots using smart variable pacing:
+              * [RULE A] If a shot is a Landscape, Scenery, Establishing View, or Drone View $\rightarrow$ Assign a duration of **5sec, 6sec, or 7sec** (Long Slow Takes).
+              * [RULE B] If a shot contains character actions, movements, or dialogue $\rightarrow$ Assign a fast-paced duration of **1sec, 2sec, or 3sec** (Fast Dynamic Cuts).
             
-            [Output Format Structure for each Scene block]
-            Write: "🎬 SCENE [Number]: [Location Name] - [Time of Day]"
-            Then list the multiple shots inside it:
-              * SHOT [Scene Number].[Shot Number] (e.g., SHOT 1.1) - [Duration: X Seconds (3s to 7s)]
-              * Camera Shot Type: (Dynamically choose appropriate types like: Close-up, Wide Shot, Extreme Close-up, Medium Shot, Low-Angle Shot, Over-the-shoulder)
-              * Action / Character Dialogue: (Written in {story_language} detailing what happens in this 3-7s snippet, maintaining character identity)
+            [Output Format Structure for each Scene block - Strictly Follow This]
+            🎬 SCENE [Number]: [Location Name] - [Time of Day]
+            
+            🎙️ NARRATION: (Write deep, immersive, emotional voiceover narration in {story_language} for this section of the scene)
+            
+            List of Shots inside this scene:
+              * SHOT [Scene Number].[Shot Number] (e.g., SHOT 1.1) - [Duration: X Seconds]
+              * Camera Shot Type: (e.g., Wide Establishing Shot, Close-up, Over-the-shoulder, Dolly Zoom)
+              * Action Description: (Detail what happens in {story_language})
+              * 👥 DIALOGUE: [Character Name]: "[Write beautiful, dramatic spoken lines in {story_language} reflecting their character profile]" (If no dialogue in this brief shot, omit or write 'No dialogue')
             """
             
             if get_image_prompt:
-                command += f"\n              * Image Prompt: Detailed Midjourney text prompt in English matching visual style '{art_style}' with aspect ratio '--ar {image_ratio}'. You MUST inject the character reference profile rules explicitly into this text prompt to maintain visual consistency. Set exact spatial positions of characters/objects (e.g., 'On the left side...'). Specify lighting conditions matching the mood."
+                command += f"\n              * Image Prompt: Detailed Midjourney text prompt in English matching visual style '{art_style}' with aspect ratio '--ar {image_ratio}'. Explicitly inject the character reference profile features. For landscapes, describe majestic depth, cinematic lighting, and atmosphere."
               
             if get_video_prompt:
-                command += "\n              * Video Prompt & Direction: Dynamic generative video prompt (Sora/Runway) in English. Must maintain 100% spatial alignment with the Image Prompt above. If the subject is on the left in the image, camera/action directions must reference the left side. Specify precise camera movements corresponding to the Camera Shot Type."
+                command += "\n              * Video Prompt & Direction: Dynamic generative video prompt (Sora/Runway) in English. Must maintain 100% spatial alignment with the Image Prompt. Specify camera paths (e.g., slow drone glide, fast pan, dramatic tilt)."
                 
-            command += "\n              * Sound Style & Music Mood: Generate descriptive SFX (Sound Effects), ambient audio profiles, and cinematic orchestral background music cues in English suitable for professional sound matching."
+            command += "\n              * Sound Style & Music Mood: Generate descriptive SFX (Sound Effects), ambient noise profiles, and orchestral background music cues in English (e.g., 'Soft piano orchestration, birds chirping ambient loop, grass rustling SFX')."
                 
             command += "\n\nFormat the output beautifully and structurally so the user can easily review or edit."
             
-            with st.spinner("⚡ Ultimate Director Engine is syncing characters, shots, and sound design..."):
+            with st.spinner("⚡ Director AI is composing epic dialogues, narrations, and calculating shots..."):
                 response = model.generate_content(command)
                 st.session_state.generated_script = response.text
                 
