@@ -10,7 +10,7 @@ custom_css = """
 <style>
     /* 1. Raw Background Photo - High Clarity */
     .stApp {
-        background-image: url('https://wallpaperaccess.com/full/288747.jpg');
+        background-image: url('https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80');
         background-size: cover;
         background-position: center;
         background-attachment: fixed;
@@ -171,48 +171,76 @@ if st.button("Generate Production Board"):
             total_seconds = (duration_min * 60) + duration_sec
             random_seed = random.randint(1, 100000)
             
-            # 🧠 Master Prompt Injected with Strict Living Background & Environmental Motion Controls
+            # --- Determine Midjourney Version Tag based on Style Selection ---
+            mj_version = "--v 6.0"
+            if "Anime" in art_style:
+                mj_version = "--niji 6"
+            
+            # 🧠 Master Ordered Prompt Structure
             command = f"""
             You are a Legendary Screenplay Writer, Hollywood Film Director, and Disney Animation Storyboard Artist.
-            Analyze the concept and write an epic cinematic shooting script broken down into structural Scenes, and sub-divided into independent cinematic SHOTS with fully immersive environment designs. (Seed: {random_seed})
+            Generate a comprehensive production document according to the following strict layout. (Seed: {random_seed})
             
             [Specifications]
-            1. Target Video Duration: {duration_min} minutes and {duration_sec} seconds (Total: {total_seconds} seconds).
+            1. Target Video Duration: {duration_min} minutes and {duration_sec} seconds.
             2. Genre: {story_type}
-            3. Main Language: Narration, Script storylines, Actions, and Dialogue text blocks MUST be written beautifully in {story_language}. Technical AI prompts (Image, Video, Sound) must remain in English.
+            3. Main Language: Text content for Story Title, Full Story, Script & Story Overview, Narration, Action lines, and Dialogue blocks MUST be written beautifully in {story_language}. Technical prompts (Image, Video, Sound) must be in English.
             4. Plot Concept: '{story_concept}'
-            5. Character Reference Profile: '{char_profile if char_profile else "Automatically define unique character visuals and keep them identical across all prompts."}'
+            5. Character Reference Profile: '{char_profile if char_profile else "Automatically define unique character visuals."}'
             
             [Strict Director's Dynamic Pacing Rules]
-            - First, output a high-level **SCRIPT & STORY** text overview in {story_language}.
-            - Next, break the story down into broad **SCENES** based on locations.
-            - Inside EACH SCENE, break it down into MULTIPLE separate shots using smart variable pacing:
+            - Inside Scenes, break them down into separate shots using smart variable pacing:
               * [RULE A] If a shot is a Landscape, Scenery, Establishing View, or Drone View -> Assign a duration of 5sec, 6sec, or 7sec (Long Slow Takes).
               * [RULE B] If a shot contains character actions, movements, or dialogue -> Assign a fast-paced duration of 1sec, 2sec, or 3sec (Fast Dynamic Cuts).
             
-            [Output Format Structure for each Scene block]
-            🎬 SCENE [Number]: [Location Name] - [Time of Day]
+            [OUTPUT LAYOUT STRUCTURE - You MUST output exactly in this sequence]
             
-            🎙️ NARRATION: (Write deep, immersive, emotional voiceover narration in {story_language})
+            📌 STORY TITLE
+            (Generate a creative title in {story_language})
+            
+            ---
+            
+            📖 FULL STORY
+            (Expand the input concept into a cohesive, beautifully structured full narrative story in {story_language})
+            
+            ---
+            
+            🎬 SCRIPT & STORY OVERVIEW
+            (Provide a cinematic high-level breakdown of the script structure and target vision in {story_language})
+            
+            ---
+            
+            🎭 CHARACTER PROMPTS
+            (Based on the story, generate specialized English Midjourney prompts for each main character to ensure 100% appearance consistency across independent image generation tasks. Format as: Character Name - English Midjourney Prompt with style tags)
+            
+            ---
+            
+            🎬 SCENE & SHOT BREAKDOWN
+            (Output each scene systematically following this internal block design):
+            
+            🎬 SCENE [Number]: [Location Name] - [Time of Day]
+            🎙️ NARRATION: (Write deep, immersive voiceover narration in {story_language})
             
             List of Shots inside this scene:
-              * SHOT [Scene Number].[Shot Number] (e.g., SHOT 1.1) - [Duration: X Seconds]
-              * Camera Shot Type: (e.g., Wide Establishing Shot, Close-up, Over-the-shoulder, Dolly Zoom)
+              * SHOT [Scene Number].[Shot Number] - [Duration: X Seconds]
+              * Camera Shot Type: (e.g., Wide Establishing Shot, Close-up, Dolly Zoom)
               * Action Description: (Detail what happens in {story_language})
-              * 👥 DIALOGUE: [Character Name]: "[Write beautiful, dramatic spoken lines in {story_language}]" (If no dialogue, omit or write 'No dialogue')
+              * 👥 DIALOGUE: [Character Name]: "[Dialogue line in {story_language}]" (If none, omit)
             """
             
             if get_image_prompt:
-                command += f"\n              * Image Prompt: Detailed Midjourney text prompt in English matching visual style '{art_style}' with aspect ratio '--ar {image_ratio}'. You MUST paint a vivid picture of the BACKGROUND and ENVIRONMENT. Specify the setting (e.g., epic mountains, cozy interior), lighting conditions (e.g., volumetric god rays, soft sunset bloom), color palette, weather, and background elements (e.g., glowing particles, detailed foliage) along with character positions."
+                command += f"""
+              * Image Prompt: Format exactly as: [Subject Description] in [Setting/Atmosphere], [Framing] with [Lens], [Lighting Type], [Color Palette], Cinematic Still, Film Grain, --ar {image_ratio} {mj_version} --style raw"""
               
             if get_video_prompt:
-                command += "\n              * Video Prompt & Direction: Dynamic generative video prompt (Sora/Runway) in English. Must maintain 100% spatial alignment with the Image Prompt. You MUST strictly describe BOTH Subject Motion and BACKGROUND MOTION (e.g., leaves rustling in the wind, dramatic clouds rolling by, rain pouring down, fireplace crackling, or background neon lights flickering). Specify cinematic camera paths (e.g., slow drone glide, fast dramatic pan, tracking tilt)."
+                command += """
+              * Video Prompt & Direction: Format exactly as: [Camera Movement], [Subject description + Action], [Environment with dynamic elements], [Lighting & Color Palette], [Cinematic Terms]"""
                 
-            command += "\n              * Sound Style & Music Mood: Generate descriptive SFX (Sound Effects), ambient noise profiles, and orchestral background music cues in English suitable for professional sound matching."
+            command += "\n              * Sound Style & Music Mood: Generate descriptive SFX, ambient noise profiles, and orchestral cues in English."
                 
-            command += "\n\nFormat the output beautifully and structurally so the user can easily review or edit."
+            command += "\n\nFormat the output beautifully, separated cleanly by sections using Markdown formatting."
             
-            with st.spinner("⚡ Director AI is generating scripts with living environments and dynamic motion..."):
+            with st.spinner("⚡ Director AI is constructing your complete structured masterpiece..."):
                 response = model.generate_content(command)
                 st.session_state.generated_script = response.text
                 
