@@ -10,7 +10,7 @@ custom_css = """
 <style>
     /* 1. Raw Background Photo - High Clarity */
     .stApp {
-        background-image: url('https://i.pinimg.com/736x/ad/4a/b1/ad4ab1d5ad3bcff6720d904b2af81801.jpg');
+        background-image: url('https://wallpapercave.com/wp/wp3356870.jpg');
         background-size: cover;
         background-position: center;
         background-attachment: fixed;
