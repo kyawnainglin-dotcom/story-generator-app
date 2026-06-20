@@ -133,4 +133,112 @@ art_style = st.sidebar.selectbox(
 
 image_ratio = st.sidebar.selectbox("Midjourney Ratio (--ar)", ["16:9", "9:16", "4:3", "1:1"])
 
-st.
+st.sidebar.markdown("<hr style='border-color: #1e293b;'/>", unsafe_allow_html=True)
+
+get_image_prompt = st.sidebar.checkbox("Generate Image Prompts", value=True)
+get_video_prompt = st.sidebar.checkbox("Generate Video Prompts & Directions", value=True)
+
+st.sidebar.markdown("<hr style='border-color: #1e293b;'/>", unsafe_allow_html=True)
+user_api_key = st.sidebar.text_input("Enter Gemini API Key", type="password")
+st.sidebar.markdown("[Get Free API Key](https://aistudio.google.com)")
+
+
+# --- 🎬 Main Frame Screen Display ---
+st.markdown("<div class='main-content'>", unsafe_allow_html=True)
+st.title("Director's Master Script & Shot Board")
+st.markdown("<div class='sub-text'>Professional Scene Splitter & Prompt Sync Engine</div>", unsafe_allow_html=True)
+
+story_concept = st.text_input("", placeholder="ဇတ်လမ်းအကျဉ်း သို့မဟုတ် အိုင်ဒီယာ ရေးရန်")
+
+if st.button("Generate Production Board"):
+    if not user_api_key:
+        st.error("Please enter your Gemini API Key in the sidebar.")
+    else:
+        try:
+            genai.configure(api_key=user_api_key)
+            
+            generation_config = {
+                "temperature": 0.85, 
+                "top_p": 0.95,
+                "top_k": 40,
+            }
+            
+            model = genai.GenerativeModel(
+                model_name='gemini-2.5-flash',
+                generation_config=generation_config
+            )
+            
+            total_seconds = (duration_min * 60) + duration_sec
+            random_seed = random.randint(1, 100000)
+            
+            # 🧠 Master Prompt Injected with Strict Living Background & Environmental Motion Controls
+            command = f"""
+            You are a Legendary Screenplay Writer, Hollywood Film Director, and Disney Animation Storyboard Artist.
+            Analyze the concept and write an epic cinematic shooting script broken down into structural Scenes, and sub-divided into independent cinematic SHOTS with fully immersive environment designs. (Seed: {random_seed})
+            
+            [Specifications]
+            1. Target Video Duration: {duration_min} minutes and {duration_sec} seconds (Total: {total_seconds} seconds).
+            2. Genre: {story_type}
+            3. Main Language: Narration, Script storylines, Actions, and Dialogue text blocks MUST be written beautifully in {story_language}. Technical AI prompts (Image, Video, Sound) must remain in English.
+            4. Plot Concept: '{story_concept}'
+            5. Character Reference Profile: '{char_profile if char_profile else "Automatically define unique character visuals and keep them identical across all prompts."}'
+            
+            [Strict Director's Dynamic Pacing Rules]
+            - First, output a high-level **SCRIPT & STORY** text overview in {story_language}.
+            - Next, break the story down into broad **SCENES** based on locations.
+            - Inside EACH SCENE, break it down into MULTIPLE separate shots using smart variable pacing:
+              * [RULE A] If a shot is a Landscape, Scenery, Establishing View, or Drone View -> Assign a duration of 5sec, 6sec, or 7sec (Long Slow Takes).
+              * [RULE B] If a shot contains character actions, movements, or dialogue -> Assign a fast-paced duration of 1sec, 2sec, or 3sec (Fast Dynamic Cuts).
+            
+            [Output Format Structure for each Scene block]
+            🎬 SCENE [Number]: [Location Name] - [Time of Day]
+            
+            🎙️ NARRATION: (Write deep, immersive, emotional voiceover narration in {story_language})
+            
+            List of Shots inside this scene:
+              * SHOT [Scene Number].[Shot Number] (e.g., SHOT 1.1) - [Duration: X Seconds]
+              * Camera Shot Type: (e.g., Wide Establishing Shot, Close-up, Over-the-shoulder, Dolly Zoom)
+              * Action Description: (Detail what happens in {story_language})
+              * 👥 DIALOGUE: [Character Name]: "[Write beautiful, dramatic spoken lines in {story_language}]" (If no dialogue, omit or write 'No dialogue')
+            """
+            
+            if get_image_prompt:
+                command += f"\n              * Image Prompt: Detailed Midjourney text prompt in English matching visual style '{art_style}' with aspect ratio '--ar {image_ratio}'. You MUST paint a vivid picture of the BACKGROUND and ENVIRONMENT. Specify the setting (e.g., epic mountains, cozy interior), lighting conditions (e.g., volumetric god rays, soft sunset bloom), color palette, weather, and background elements (e.g., glowing particles, detailed foliage) along with character positions."
+              
+            if get_video_prompt:
+                command += "\n              * Video Prompt & Direction: Dynamic generative video prompt (Sora/Runway) in English. Must maintain 100% spatial alignment with the Image Prompt. You MUST strictly describe BOTH Subject Motion and BACKGROUND MOTION (e.g., leaves rustling in the wind, dramatic clouds rolling by, rain pouring down, fireplace crackling, or background neon lights flickering). Specify cinematic camera paths (e.g., slow drone glide, fast dramatic pan, tracking tilt)."
+                
+            command += "\n              * Sound Style & Music Mood: Generate descriptive SFX (Sound Effects), ambient noise profiles, and orchestral background music cues in English suitable for professional sound matching."
+                
+            command += "\n\nFormat the output beautifully and structurally so the user can easily review or edit."
+            
+            with st.spinner("⚡ Director AI is generating scripts with living environments and dynamic motion..."):
+                response = model.generate_content(command)
+                st.session_state.generated_script = response.text
+                
+        except Exception as e:
+            st.error(f"Something went wrong: {str(e)}")
+
+# --- ✍️ Editable Output Board Section ---
+if st.session_state.generated_script:
+    st.markdown("<br><hr style='border-color: #cbd5e1;'/>", unsafe_allow_html=True)
+    st.markdown("### 🎬 Director's Production Board (Editable)")
+    st.info("💡 အောက်က Box ထဲက စာသားတွေကို စိတ်ကြိုက် ပြင်ဆင်၊ ဖျက်၊ တိုး ရေးသားနိုင်ပါတယ်ဗျာ။ ပြင်ပြီးရင် အောက်က ခလုတ်နဲ့ ဒေါင်းလုဒ် ဆွဲနိုင်ပါတယ်။")
+    
+    edited_script = st.text_area(
+        label="Edit Script & Prompt Board Here",
+        value=st.session_state.generated_script,
+        height=550,
+        label_visibility="collapsed"
+    )
+    
+    st.session_state.generated_script = edited_script
+    
+    st.download_button(
+        label="📥 Download Edited Master Script (.txt)",
+        data=st.session_state.generated_script,
+        file_name=f"director_edited_{story_type.lower()}_script.txt",
+        mime="text/plain"
+    )
+
+st.markdown("</div>", unsafe_allow_html=True)
