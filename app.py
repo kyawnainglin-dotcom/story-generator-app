@@ -10,7 +10,7 @@ custom_css = """
 <style>
     /* 1. Raw Background Photo - High Clarity */
     .stApp {
-        background-image: url('https://wallpapercave.com/wp/wp14951714.webp');
+        background-image: url('https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80');
         background-size: cover;
         background-position: center;
         background-attachment: fixed;
@@ -23,7 +23,7 @@ custom_css = """
     h1 { color: #0f172a !important; text-align: center; font-family: 'Helvetica Neue', sans-serif; font-weight: 800; letter-spacing: 1px; margin-bottom: 5px; }
     .sub-text { text-align: center; color: #1e293b; font-size: 16px; margin-bottom: 25px; letter-spacing: 0.5px; font-weight: 700; }
     
-    /* 4. Translucent Input Box & Placeholder Color Fix */
+    /* 4. Translucent Input Box & Cursor Black Color Fix */
     .stTextInput > div > div > input {
         border-radius: 12px;
         background-color: rgba(255, 255, 255, 0.95);
@@ -33,6 +33,7 @@ custom_css = """
         font-size: 16px;
         font-weight: 600;
         box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        caret-color: #000000 !important; /* Cursor Color Forced to Black */
     }
     .stTextInput > div > div > input::placeholder {
         color: #475569 !important;
@@ -41,6 +42,7 @@ custom_css = """
     .stTextInput > div > div > input:focus {
         border: 2px solid #1e40af;
         box-shadow: 0 0 12px rgba(30, 64, 175, 0.25);
+        caret-color: #000000 !important; /* Keep Cursor Black on Focus */
     }
     
     /* 5. Sleek Full-Width Action Button */
@@ -74,7 +76,7 @@ custom_css = """
     [data-testid="stSidebar"] .stCheckbox p { color: #f8fafc !important; font-weight: 600 !important; }
     [data-testid="stSidebar"] .stRadio div { color: #f8fafc !important; }
     
-    /* 7. Editable Text Area Design Upgrades */
+    /* 7. Editable Text Area Design Upgrades with Black Cursor */
     .stTextArea textarea {
         background-color: rgba(255, 255, 255, 0.98) !important;
         color: #0f172a !important;
@@ -84,6 +86,7 @@ custom_css = """
         border: 2px solid #cbd5e1 !important;
         border-radius: 12px !important;
         padding: 20px !important;
+        caret-color: #000000 !important; /* Text Area Cursor Black */
     }
 </style>
 """
@@ -171,10 +174,19 @@ if st.button("Generate Production Board"):
             total_seconds = (duration_min * 60) + duration_sec
             random_seed = random.randint(1, 100000)
             
-            # --- Determine Midjourney Version Tag based on Style Selection ---
-            mj_version = "--v 6.0"
-            if "Anime" in art_style:
+            # --- Handle Logic Filters for Art Style Overrides ---
+            if "Disney" in art_style:
+                mj_version = ""  # Let AI handle native version or blend
+                style_suffix = "3D Pixar Disney Animation Style, Vibrant Clay Render, Smooth Shading, Raytracing, Cute Character Design"
+                cinematic_video_terms = "Disney Pixar Animation Style, Smooth 3D Motion, Whimsical Feel"
+            elif "Anime" in art_style:
                 mj_version = "--niji 6"
+                style_suffix = "Anime Key Visual, Sharp Lineart, Vibrant Colors, Cel Shaded"
+                cinematic_video_terms = "Anime Shinkai Style Motion, Fluent 2D Animation"
+            else:
+                mj_version = "--v 6.0"
+                style_suffix = "Cinematic Still, Film Grain, --style raw"
+                cinematic_video_terms = "Cinematic Movie Style, Photorealistic, 8k Resolution, Masterpiece"
             
             # 🧠 Master Ordered Prompt Structure
             command = f"""
@@ -184,9 +196,10 @@ if st.button("Generate Production Board"):
             [Specifications]
             1. Target Video Duration: {duration_min} minutes and {duration_sec} seconds.
             2. Genre: {story_type}
-            3. Main Language: Text content for Story Title, Full Story, Script & Story Overview, Narration, Action lines, and Dialogue blocks MUST be written beautifully in {story_language}. Technical prompts (Image, Video, Sound) must be in English.
-            4. Plot Concept: '{story_concept}'
-            5. Character Reference Profile: '{char_profile if char_profile else "Automatically define unique character visuals."}'
+            3. Visual Art Style Context: {art_style}
+            4. Main Language: Text content for Story Title, Full Story, Script & Story Overview, Narration, Action lines, and Dialogue blocks MUST be written beautifully in {story_language}. Technical prompts (Image, Video, Sound) must be in English.
+            5. Plot Concept: '{story_concept}'
+            6. Character Reference Profile: '{char_profile if char_profile else "Automatically define unique character visuals based on the specified Art Style."}'
             
             [Strict Director's Dynamic Pacing Rules]
             - Inside Scenes, break them down into separate shots using smart variable pacing:
@@ -211,7 +224,7 @@ if st.button("Generate Production Board"):
             ---
             
             🎭 CHARACTER PROMPTS
-            (Based on the story, generate specialized English Midjourney prompts for each main character to ensure 100% appearance consistency across independent image generation tasks. Format as: Character Name - English Midjourney Prompt with style tags)
+            (Based on the story, generate specialized English Midjourney prompts for each main character to ensure appearance consistency. Format as: Character Name - English Midjourney Prompt with appropriate style tags matching '{art_style}')
             
             ---
             
@@ -230,11 +243,11 @@ if st.button("Generate Production Board"):
             
             if get_image_prompt:
                 command += f"""
-              * Image Prompt: Format exactly as: [Subject Description] in [Setting/Atmosphere], [Framing] with [Lens], [Lighting Type], [Color Palette], Cinematic Still, Film Grain, --ar {image_ratio} {mj_version} --style raw"""
+              * Image Prompt: Format exactly as: [Subject Description] in [Setting/Atmosphere], [Framing] with [Lens], [Lighting Type], [Color Palette], {style_suffix} --ar {image_ratio} {mj_version}"""
               
             if get_video_prompt:
-                command += """
-              * Video Prompt & Direction: Format exactly as: [Camera Movement], [Subject description + Action], [Environment with dynamic elements], [Lighting & Color Palette], [Cinematic Terms]"""
+                command += f"""
+              * Video Prompt & Direction: Format exactly as: [Camera Movement], [Subject description + Action], [Environment with dynamic elements], [Lighting & Color Palette], {cinematic_video_terms}"""
                 
             command += "\n              * Sound Style & Music Mood: Generate descriptive SFX, ambient noise profiles, and orchestral cues in English."
                 
