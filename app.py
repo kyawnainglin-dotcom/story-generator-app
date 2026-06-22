@@ -1,6 +1,7 @@
 import streamlit as st
 import google.generativeai as genai
 import random
+import time
 
 # --- Page Config ---
 st.set_page_config(page_title="AI Director Master Shot-List Studio", layout="wide")
@@ -10,7 +11,7 @@ custom_css = """
 <style>
     /* 1. Raw Background Photo - High Clarity */
     .stApp {
-        background-image: url('https://wallpapercave.com/wp/wp3356870.jpg');
+        background-image: url('https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80');
         background-size: cover;
         background-position: center;
         background-attachment: fixed;
@@ -133,11 +134,21 @@ if st.button("Generate Production Board"):
     else:
         try:
             genai.configure(api_key=user_api_key)
-            generation_config = {"temperature": 0.85, "top_p": 0.95, "top_k": 40}
+            
+            # 🚀 HIGH CREATIVITY SETTINGS - Prevents Duplicate Plots Completely
+            generation_config = {
+                "temperature": 0.95,  # Increased for maximum narrative variation
+                "top_p": 0.95,
+                "top_k": 50
+            }
+            
             model = genai.GenerativeModel('gemini-2.5-flash', generation_config=generation_config)
             
             total_seconds = (duration_min * 60) + duration_sec
-            random_seed = random.randint(1, 100000)
+            
+            # Generate a truly unpredictable seed & time-based key to force unique responses
+            random_seed = random.randint(1, 999999)
+            timestamp_key = int(time.time())
             
             # --- Handle Style Filter Overrides ---
             if "Disney" in art_style:
@@ -153,16 +164,20 @@ if st.button("Generate Production Board"):
                 img_style = "Cinematic Still, Film Grain, --style raw"
                 vid_style = "Cinematic Movie Style, Photorealistic, 8k Resolution, Masterpiece"
             
-            # 🧠 Master Orchestrated Prompt Structure
+            # 🧠 Master Orchestrated Prompt Structure with Dynamic System Randomizers
             command = f"""
+            [SYSTEM RANDOMIZER KEY: {random_seed}-{timestamp_key}]
+            CRITICAL INSTRUCTION: You MUST create a completely fresh, unique, and unpredictable story plot line. Do NOT recycle or use standard cliche story paths. 
+            
             You are a Legendary Screenplay Writer and Hollywood Film Director. 
-            Generate a comprehensive production document according to the following strict layout. (Seed: {random_seed})
+            Generate a comprehensive production document according to the following strict layout.
             
             [Specifications]
             1. Target Duration: {duration_min}m {duration_sec}s.
             2. Genre: {story_type} | Style: {art_style}
             3. Language: Native text (Title, Story, Overview, Narration, Action, Dialogue) must be in {story_language}.
-            4. Plot: '{story_concept}' | Character Reference: '{char_profile}'
+            4. Plot Base/Concept: '{story_concept if story_concept else "Generate a completely random epic concept from scratch based on the selected Genre."}' 
+            5. Character Reference: '{char_profile}'
             
             [Pacing Rules]
             - Landscape/Establishing: 5-7s. 
@@ -193,7 +208,7 @@ if st.button("Generate Production Board"):
               * Sound Style & Music Mood: [English Description]
             """
             
-            with st.spinner("⚡ Constructing your professional multi-layer masterpiece..."):
+            with st.spinner("⚡ Director AI is brainstorming an entirely new custom plot..."):
                 response = model.generate_content(command)
                 st.session_state.generated_script = response.text
                 
