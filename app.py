@@ -11,7 +11,7 @@ custom_css = """
 <style>
     /* 1. Raw Background Photo - High Clarity */
     .stApp {
-        background-image: url('https://story-generator-app-tundkyrzwnm3zlf3keubqz.streamlit.app/');
+        background-image: url('https://images.wallpapersden.com/image/download/sails-ship-in-ocean_a2plZ2aUmZqaraWkpJRmbmdlrWZmZ2U.jpg');
         background-size: cover;
         background-position: center;
         background-attachment: fixed;
