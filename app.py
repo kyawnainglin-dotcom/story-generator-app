@@ -82,7 +82,7 @@ st.markdown("<div class='sub-text'>Dialogue & Action-Driven AI Production Suite<
 story_concept = st.text_input("", placeholder="ဇတ်လမ်းအကျဉ်း သို့မဟုတ် အိုင်ဒီယာ ရေးရန်")
 total_target_seconds = (duration_min * 60) + duration_sec
 
-# --- STEP 1: GENERATE SCREENPLAY SCRIPT (WITH ACTION & DIALOGUES) ---
+# --- STEP 1: GENERATE SCREENPLAY SCRIPT ---
 if st.session_state.story_stage == "input":
     if st.button("Step 1: Brainstorm Master Screenplay"):
         if not user_api_key: st.error("API Key လိုအပ်ပါသည်။")
@@ -169,7 +169,7 @@ if st.session_state.story_stage in ["story_ready", "scenes_extracted"]:
 
     st.markdown("<br><hr/>", unsafe_allow_html=True)
 
-    # --- STEP 2: CHUNK SCENES ---
+    # --- STEP 2: CHUNK SCENES (FIXED LEVEL DETECTION) ---
     if st.session_state.story_stage == "story_ready":
         st.markdown("#### 🎬 Step 2: Extracting Screenplay Scene Blocks")
         if st.button("Separate Screenplay Into Scene Chunks"):
