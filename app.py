@@ -11,12 +11,15 @@ st.set_page_config(page_title="AI Director Master Shot-List Studio", layout="wid
 custom_css = """
 <style>
     .stApp {
-        background-image: url('https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80');
-        background-size: cover; background-position: center; background-attachment: fixed;
+        /* ဒီနေရာမှာ အစ်ကိုကြီးရဲ့ ပုံ Link ကို ထည့်ပေးရပါမယ် */
+        background-image: url('https://w0.peakpx.com/wallpaper/705/104/HD-wallpaper-anime-girls-playing-games-bed-short-hair-blond.jpg');
+        background-size: cover; 
+        background-position: center; 
+        background-attachment: fixed;
     }
     .main-content { padding-top: 30vh; }
-    h1 { color: #0f172a !important; text-align: center; font-family: 'Helvetica Neue', sans-serif; font-weight: 800; letter-spacing: 1px; margin-bottom: 5px; }
-    .sub-text { text-align: center; color: #1e293b; font-size: 16px; margin-bottom: 25px; letter-spacing: 0.5px; font-weight: 700; }
+    h1 { color: #ffffff !important; text-align: center; font-family: 'Helvetica Neue', sans-serif; font-weight: 800; letter-spacing: 1px; margin-bottom: 5px; text-shadow: 2px 2px 4px rgba(0,0,0,0.7); }
+    .sub-text { text-align: center; color: #ffbc00; font-size: 16px; margin-bottom: 25px; letter-spacing: 0.5px; font-weight: 700; text-shadow: 1px 1px 3px rgba(0,0,0,0.8); }
     
     .stTextInput > div > div > input {
         border-radius: 12px; background-color: rgba(255, 255, 255, 0.95);
@@ -29,13 +32,11 @@ custom_css = """
     }
     div.stButton > button:hover { background: linear-gradient(45deg, #1e40af, #2563eb); transform: translateY(-1px); }
     
-    /* Danger/Reset Button Style */
     div.stButton > button[data-testid="baseButton-secondary"] {
-        background: linear-gradient(45deg, #7f1d1d, #b91c1c) !important;
-        color: white !important;
+        background: linear-gradient(45deg, #7f1d1d, #b91c1c) !important; color: white !important;
     }
     
-    [data-testid="stSidebar"] { background-color: #0f172a !important; border-right: 1px solid #1e293b; }
+    [data-testid="stSidebar"] { background-color: rgba(15, 23, 42, 0.95) !important; border-right: 1px solid #1e293b; }
     [data-testid="stSidebar"] .stMarkdown h2 { color: #ffbc00 !important; font-weight: bold; }
     [data-testid="stSidebar"] label { color: #f8fafc !important; font-weight: 600 !important; }
     
@@ -48,7 +49,6 @@ custom_css = """
     .scene-box { background-color: rgba(255, 255, 255, 0.95); border-left: 5px solid #1e40af; padding: 15px; border-radius: 8px; margin-bottom: 15px; color: #0f172a; }
 </style>
 """
-st.markdown(custom_css, unsafe_allow_html=True)
 
 # --- Session State Management ---
 if "story_stage" not in st.session_state: st.session_state.story_stage = "input"
@@ -77,7 +77,7 @@ secondary_type = st.sidebar.selectbox("Secondary Genre (Optional Combo)", ["None
 art_style = st.sidebar.selectbox("Art Style", ["Japan Animation Style (Anime)", "3D Disney Cartoon Style", "Realistic Cinematic Movie", "Cyberpunk Art"])
 image_ratio = st.sidebar.selectbox("Midjourney Ratio", ["16:9", "9:16", "4:3", "1:1"])
 
-# Persistent Project Reset Button in Sidebar for Safety
+# Persistent Project Reset Button in Sidebar
 st.sidebar.markdown("<hr style='border-color: #1e293b;'/>", unsafe_allow_html=True)
 if st.sidebar.button("🔄 Start Entire New Project", type="secondary"):
     st.session_state.story_stage = "input"
@@ -94,18 +94,16 @@ st.markdown("<div class='main-content'>", unsafe_allow_html=True)
 st.title("Director's Master Script & Shot Board")
 st.markdown("<div class='sub-text'>Dialogue, Action & Time-Synced Production Suite</div>", unsafe_allow_html=True)
 
-# Navigation Banner for Mobile Awareness
 st.caption(f"**Current Workspace Status:** Active Stage - `{st.session_state.story_stage.upper()}`")
 
 # --- STEP 1: GENERATE SCREENPLAY SCRIPT ---
 if st.session_state.story_stage == "input":
-    story_concept = st.text_input("Story Concept", placeholder="ဇတ်လမ်းအကျဉ်း သို့မဟုတ် အိုင်ဒီယာ ရေးရန်", label_visibility="collapsed")
+    story_concept = st.text_input("Story Concept", placeholder="ဇတ်လမ်းအကျဉ်း (ဘာမှမရေးဘဲ နှိပ်ပါက AI က ဂျန်ရာအလိုက် အလိုအလျောက် ကြံဆပေးမည်)", label_visibility="collapsed")
     total_target_seconds = (duration_min * 60) + duration_sec
     
     if st.button("Step 1: Brainstorm Master Screenplay"):
         if not user_api_key: st.error("API Key လိုအပ်ပါသည်။")
         elif total_target_seconds == 0: st.error("ကျေးဇူးပြု၍ အချိန်တစ်ခု သတ်မှတ်ပေးပါဗျာ။")
-        elif not story_concept: st.error("ဇာတ်လမ်းအိုင်ဒီယာ တစ်ခုခု အရင်ရိုက်ထည့်ပေးပါဗျာ။")
         else:
             try:
                 genai.configure(api_key=user_api_key)
@@ -117,6 +115,9 @@ if st.session_state.story_stage == "input":
                 status_box = st.empty()
                 combo_genre = story_type if secondary_type == "None" else f"{story_type} + {secondary_type}"
                 
+                # Dynamic Concept Handler
+                concept_clause = f"based on this raw user concept: '{story_concept}'" if story_concept.strip() else f"based completely on your own highly original and creative brainstormed premise for the selected genre context."
+                
                 if total_target_seconds <= 60: length_instruction = "SHORT SCREENPLAY. 1-2 distinct scenes with immediate action, punchy characters dialogues, and a sharp plot twist."
                 elif total_target_seconds <= 300: length_instruction = "MEDIUM SCREENPLAY. 3-4 structured dramatic scenes with deep character interactions, character physical movements, and high-stakes dialogues."
                 else: length_instruction = f"EPIC MULTI-ACT SCRIPT. A highly detailed multi-scene screenplay timeline with dense situational character action, dialogue exchanges, and world-building blocks tailored for {duration_min} minutes."
@@ -126,7 +127,8 @@ if st.session_state.story_stage == "input":
                     status_box.markdown(f"🧠 **AI Director (Script Loop {attempt}/{max_attempts}):** Designing Screenplay & Dialogues...")
                     
                     story_command = f"""
-                    Write a theatrical movie script/screenplay based on: '{story_concept}'. Genre: {combo_genre}. Language: Write in {story_language}.
+                    Write a theatrical movie script/screenplay {concept_clause}. 
+                    Genre: {combo_genre}. Language: Write in {story_language}.
                     Constraint: Script scale must follow: {length_instruction}.
                     
                     CRITICAL REQUIREMENT: Do NOT write like a storybook/prose. Write it as an interactive screenplay script containing active physical CHARACTER ACTIONS and explicit DIALOGUES between characters.
@@ -179,7 +181,6 @@ if st.session_state.story_stage in ["story_ready", "scenes_extracted"]:
     st.markdown("### 📖 Approved Screenplay Script (Actions & Dialogues Included)")
     st.text_area("Story View", value=st.session_state.approved_story, height=200, label_visibility="collapsed")
     
-    # Soft Reset button right on the main interface to clear and start over safely
     if st.button("❌ Discard Project & Go Back to Start"):
         st.session_state.story_stage = "input"
         st.session_state.approved_story = ""
@@ -227,7 +228,6 @@ if st.session_state.story_stage in ["story_ready", "scenes_extracted"]:
     # --- STEP 3: INTERACTIVE SCENE SHOT LIST WITH TIMED PROMPTS ---
     if st.session_state.story_stage == "scenes_extracted":
         st.markdown("### 🎬 Continuity Production Board (Dialogue, Action & Seconds Synced)")
-        st.caption("💡 iPhone အသုံးပြုသူများအတွက် အထူးသီးသန့်- အောက်ပါ ဒေါင်းလုဒ်ခလုတ်ကို နှိပ်ပြီးလျှင် Back Key နှိပ်စရာမလိုဘဲ ဤစာမျက်နှာတွင်တင် ဆက်လက်ရှိနေမည်ဖြစ်ပါသည်။ ပရောဂျက်အသစ် ပြန်စလိုပါက ဘယ်ဘက် Sidebar ရှိ အနီရောင်ခလုတ်ကို သုံးနိုင်ပါသည်။")
         
         if "Disney" in art_style:
             mj_style = "3D Pixar Disney Animation Style, Vibrant Clay Render, Raytracing"
