@@ -149,32 +149,49 @@ if st.session_state.story_stage == "input":
                     attempt += 1
                     status_box.markdown(f"🧠 **AI Director (Script Loop {attempt}/{max_attempts}):** Designing Screenplay & Dialogues...")
                     
-                    story_command = f"""
-                    Write a theatrical movie script/screenplay {concept_clause}. 
-                    Genre: {combo_genre}. Language: Write in {story_language}.
-                    Constraint: Script scale must follow: {length_instruction}.
-                    
-                    CRITICAL REQUIREMENT: Do NOT write like a storybook/prose. Write it as an interactive screenplay script containing active physical CHARACTER ACTIONS and explicit DIALOGUES between characters.
-                    
-                    Evaluate yourself at the end within these tags:
-                    CRITIQUE_START
-                    Plot Twist Score: [1-10]
-                    Emotional Depth Score: [1-10]
-                    Reasoning: [One sentence in English]
-                    CRITIQUE_END
-                    
-                    Structure:
-                    📌 SCRIPT TITLE: [Title]
-                    📖 FULL SCREENPLAY: [Write utilizing explicit scene headings, character action lines, and character dialogues]
-                    """
-                    response = model.generate_content(story_command)
-                    res_text = response.text
-                    
-                    twist_s = int(re.search(r"Plot Twist Score:\s*(\d+)", res_text).group(1)) if re.search(r"Plot Twist Score:\s*(\d+)", res_text) else 5
-                    depth_s = int(re.search(r"Emotional Depth Score:\s*(\d+)", res_text).group(1)) if re.search(r"Emotional Depth Score:\s*(\d+)", res_text) else 5
-                    reason = re.search(r"Reasoning:\s*(.*)", res_text).group(1) if re.search(r"Reasoning:\s*(.*)", res_text) else "Standard."
-                    final_rating = (twist_s + depth_s) / 2.0
-                    
-                    if final_rating >= 7.0:
-                        passed_gate = True
-                        st.session_state.approved_story = re.sub(r"CRITIQUE_START.*?CRITIQUE_END", "", res_text, flags=re.DOTALL).strip()
+                    try:
+                        story_command = f"""
+                        Write a theatrical movie script/screenplay {concept_clause}. 
+                        Genre: {combo_genre}. Language: Write in {story_language}.
+                        Constraint: Script scale must follow: {length_instruction}.
+                        
+                        CRITICAL REQUIREMENT: Do NOT write like a storybook/prose. Write it as an interactive screenplay script containing active physical CHARACTER ACTIONS and explicit DIALOGUES between characters.
+                        
+                        Evaluate yourself at the end within these tags:
+                        CRITIQUE_START
+                        Plot Twist Score: [1-10]
+                        Emotional Depth Score: [1-10]
+                        Reasoning: [One sentence in English]
+                        CRITIQUE_END
+                        
+                        Structure:
+                        📌 SCRIPT TITLE: [Title]
+                        📖 FULL SCREENPLAY: [Write utilizing explicit scene headings, character action lines, and character dialogues]
+                        """
+                        response = model.generate_content(story_command)
+                        res_text = response.text
+                        
+                        twist_s = int(re.search(r"Plot Twist Score:\s*(\d+)", res_text).group(1)) if re.search(r"Plot Twist Score:\s*(\d+)", res_text) else 5
+                        depth_s = int(re.search(r"Emotional Depth Score:\s*(\d+)", res_text).group(1)) if re.search(r"Emotional Depth Score:\s*(\d+)", res_text) else 5
+                        reason = re.search(r"Reasoning:\s*(.*)", res_text).group(1) if re.search(r"Reasoning:\s*(.*)", res_text) else "Standard."
+                        final_rating = (twist_s + depth_s) / 2.0
+                        
+                        if final_rating >= 7.0:
+                            passed_gate = True
+                            st.session_state.approved_story = re.sub(r"CRITIQUE_START.*?CRITIQUE_END", "", res_text, flags=re.DOTALL).strip()
+                            st.session_state.story_analysis = {"rating": final_rating, "twist": twist_s, "depth": depth_s, "reason": reason, "genre": combo_genre}
+                            st.session_state.story_stage = "story_ready"
+                            break
+                    except Exception as loop_err:
+                        pass
+                    time.sleep(0.3)
+                
+                status_box.empty()
+                if not passed_gate:
+                    st.session_state.approved_story = re.sub(r"CRITIQUE_START.*?CRITIQUE_END", "", res_text, flags=re.DOTALL).strip()
+                    st.session_state.story_analysis = {"rating": final_rating, "twist": twist_s, "depth": depth_s, "reason": "Fallback.", "genre": combo_genre}
+                    st.session_state.story_stage = "story_ready"
+                st.rerun()
+            except Exception as e: st.error(f"Error: {str(e)}")
+
+# --- DISPLAY SCREENPLAY & SCENE
