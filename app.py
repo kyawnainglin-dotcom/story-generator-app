@@ -57,7 +57,7 @@ st.markdown("<div class='main-content'>", unsafe_allow_html=True)
 st.title("Director's Master Script & Shot Board")
 
 if st.session_state.story_stage == "input":
-    story_concept = st.text_input("Story Concept", placeholder="ဇတ်လမ်းအကျဉ်း (ဥပမာ - စိတ်ကူးယဉ် အလွမ်းဇာတ်လမ်း)")
+    story_concept = st.text_input("Story Concept", placeholder="ဇတ်လမ်းအကျဉ်း")
     total_target_seconds = (duration_min * 60) + duration_sec
     
     if st.button("Step 1: Brainstorm Master Screenplay"):
@@ -86,10 +86,9 @@ if st.session_state.story_stage == "input":
                     status_box.markdown(f"🔄 **Screenplay Generation: Loop {attempt}/{max_attempts}...**")
                     
                     try:
-                        # Prompt ထဲမှာ မူပိုင်ခွင့်မငြိအောင် Highly Original ရေးခိုင်းသည့် စာသား ညှပ်ထည့်ထားပါတယ်
                         story_command = f"""
                         Write a 100% highly original, creative fictional movie screenplay based loosely on: '{story_concept}'. 
-                        Do NOT copy any existing real-world movies, copyrighted dialogues, or books. Make it unique.
+                        Do NOT copy any existing copyrighted dialogues, real movies, or books. Make it unique.
                         Genre: {combo_genre}. Language: Write in {story_language}.
                         Scale Constraint: {length_instruction}
                         
@@ -99,10 +98,9 @@ if st.session_state.story_stage == "input":
                         """
                         response = model.generate_content(story_command)
                         
-                        # --- 🛡️ CRITICAL SAFETY CHECK FOR FINISH_REASON 8 ---
                         candidate = response.candidates[0]
                         if candidate.finish_reason.name == "RECITATION" or candidate.finish_reason.value == 8:
-                            st.error(f"⚠️ Loop {attempt}: Gemini Safety Blocked (Reason: RECITATION). တကယ့်ပြင်ပက မူပိုင်ခွင့်ရှိစာသားတွေနဲ့ သွားတူလို့ AI က စာရေးတာကို ရပ်ပစ်လိုက်ပါတယ်။ Story Concept ကို နည်းနည်းပြင်ရေးပေးပါ။")
+                            st.error(f"⚠️ Loop {attempt}: Gemini Safety Blocked (Reason: RECITATION). စာသားတွေက ပြင်ပမူပိုင်ခွင့်နဲ့ သွားတူလို့ ရပ်သွားတာပါ။ Story Concept ကို နည်းနည်းပြောင်းရေးပေးပါ။")
                             continue
                             
                         if response and response.text:
@@ -154,6 +152,16 @@ if st.session_state.story_stage in ["story_ready", "scenes_extracted"]:
             except Exception as e: st.error(f"Error: {str(e)}")
 
     if st.session_state.story_stage == "scenes_extracted":
+        if "Disney" in art_style:
+            mj_style = "3D Pixar Disney Animation Style, Vibrant Clay Render, Raytracing"
+            v_style = "Disney Pixar Animation Style, Smooth Motion"
+        elif "Anime" in art_style:
+            mj_style = "Anime Key Visual, Sharp Lineart, Vibrant Colors, --niji 6"
+            v_style = "Anime Motion, Fluent 2D Animation"
+        else:
+            mj_style = "Cinematic Still, Film Grain, 8k Resolution, Photorealistic, --style raw --v 6.0"
+            v_style = "Cinematic Movie Style, Photorealistic, Masterpiece Motion"
+
         for idx, scene in enumerate(st.session_state.extracted_scenes):
             with st.container():
                 st.markdown(f"<div class='scene-box'><h4>📌 {scene['title']}</h4><p>{scene['content']}</p></div>", unsafe_allow_html=True)
@@ -163,12 +171,55 @@ if st.session_state.story_stage in ["story_ready", "scenes_extracted"]:
                         try:
                             genai.configure(api_key=user_api_key)
                             model = genai.GenerativeModel('gemini-2.5-flash')
-                            shot_command = f"Create Hollywood shot breakdown with Midjourney prompts for: {scene['content']}"
-                            shot_res = model.generate_content(shot_command)
-                            st.session_state.scene_boards[idx] = shot_res.text
+                            
+                            character_lock = f"Maintain strict character consistency: {char_profile}." if char_profile else "Ensure unified style consistency."
+                            
+                            shot_command = """
+                            You are a Hollywood Director of Photography, Character Concept Artist, and Sound Designer. Write a comprehensive Shot-by-Shot breakdown for this segment:
+                            Content: {scene_content}
+                            
+                            CRITICAL LAWS:
+                            1. 👥 CHARACTER CONCEPT ART PROFILES: Create a dedicated section at the very top. Extract all key characters and write dedicated Midjourney prompt templates for each based on {char_profile_clause}. Style: {art_mj_style} (Aspect Ratio 1:1)
+                            2. 🎵 SOUND STYLE & SFX/Solfeggio: Every single shot MUST contain character voice tone delivery rules and specific prompt parameters tailored for Suno/Udio generation.
+                            3. Technical descriptions must be in English. Screenplay translations in {story_lang}.
+                            
+                            Structure Your Entire Response Exactly Like This:
+                            👥 CHARACTER CONCEPT ART PROFILES:
+                            * [Character Name]: [Detailed Midjourney visual prompt describing appearance], Style: {art_mj_style} (Aspect Ratio 1:1)
+                            
+                            --------------------------------------------------
+                            
+                            🎬 SHOT LIST BREAKDOWN:
+                            * SHOT [Scene Number].[Shot Number] - [Duration: X Seconds]
+                            * Camera Shot Type: [e.g. Medium Close Up, Wide Shot]
+                            * Action & Dialogue Description: [Detailed Action]
+                            * 👥 DIALOGUE/NARRATION: [Character]: "[Text]"
+                            * 🎨 Image Prompt (Midjourney): [Description], Style: {art_mj_style} (Aspect Ratio: {art_ratio})
+                            * 🎥 Video Prompt & Direction (Runway/Luma): [Camera Motion, Character Kinetic Actions], Motion Style: {art_v_style}
+                            * 🎵 Sound Style & SFX/Solfeggio: [Voice tone parameters] + [Audio atmosphere prompt for background score]
+                            """.format(
+                                scene_content=scene['content'],
+                                char_profile_clause=character_lock,
+                                story_lang=story_language,
+                                art_mj_style=mj_style,
+                                art_ratio=image_ratio,
+                                art_v_style=v_style
+                            )
+                            
+                            with st.spinner(f"{scene['title']} အတွက် Features အစုံအလင်ဖြင့် Prompts များ ထုတ်လုပ်နေသည်..."):
+                                shot_res = model.generate_content(shot_command)
+                                st.session_state.scene_boards[idx] = shot_res.text
                         except Exception as e: st.error(f"API Error: {str(e)}")
+                
                 with col2:
                     if idx in st.session_state.scene_boards:
-                        st.text_area("Shot Output", value=st.session_state.scene_boards[idx], height=200, key=f"text_{idx}")
+                        st.text_area("Shot Output", value=st.session_state.scene_boards[idx], height=250, key=f"text_{idx}")
+                        # 📥 Download Button လေး ပြန်ထည့်ပေးလိုက်ပါပြီ အစ်ကိုကြီး
+                        st.download_button(
+                            label=f"📥 Download {scene['title']} Board", 
+                            data=st.session_state.scene_boards[idx], 
+                            file_name=f"scene_{idx}_master_board.txt", 
+                            key=f"dl_{idx}"
+                        )
 
 st.markdown("</div>", unsafe_allow_html=True)
