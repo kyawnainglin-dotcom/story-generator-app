@@ -30,7 +30,6 @@ custom_css = f"""
     div.stButton > button {{ background: linear-gradient(45deg, #0f172a, #1e40af); color: white !important; font-weight: bold; border-radius: 25px; width: 100% !important; padding: 12px 25px !important; }}
     [data-testid="stSidebar"] {{ background-color: rgba(15, 23, 42, 0.95) !important; }}
     .stTextArea textarea {{ background-color: rgba(255, 255, 255, 0.98) !important; color: #0f172a !important; line-height: 1.7 !important; border-radius: 12px !important; padding: 15px !important; }}
-    .critique-card {{ background-color: rgba(15, 23, 42, 0.9); border: 2px solid #ffbc00; border-radius: 12px; padding: 20px; color: #f8fafc; }}
     .scene-box {{ background-color: rgba(255, 255, 255, 0.95); border-left: 5px solid #1e40af; padding: 15px; border-radius: 8px; color: #0f172a; }}
 </style>
 """
@@ -58,7 +57,7 @@ st.markdown("<div class='main-content'>", unsafe_allow_html=True)
 st.title("Director's Master Script & Shot Board")
 
 if st.session_state.story_stage == "input":
-    story_concept = st.text_input("Story Concept", placeholder="ဇတ်လမ်းအကျဉ်း")
+    story_concept = st.text_input("Story Concept", placeholder="ဇတ်လမ်းအကျဉ်း (ဥပမာ - စိတ်ကူးယဉ် အလွမ်းဇာတ်လမ်း)")
     total_target_seconds = (duration_min * 60) + duration_sec
     
     if st.button("Step 1: Brainstorm Master Screenplay"):
@@ -75,7 +74,6 @@ if st.session_state.story_stage == "input":
                 status_box = st.empty()
                 combo_genre = story_type if secondary_type == "None" else f"{story_type} + {secondary_type}"
                 
-                # အစ်ကိုကြီးပြောတဲ့ စက္ကန့်အလိုက် Scene အရေအတွက် သတ်မှတ်ပိုင်းခြားပြီး Try မည့်စနစ်
                 if total_target_seconds <= 60:
                     length_instruction = "SHORT SCREENPLAY. Must strictly be 1-2 distinct scenes."
                 elif total_target_seconds <= 300:
@@ -83,15 +81,15 @@ if st.session_state.story_stage == "input":
                 else:
                     length_instruction = "EPIC MULTI-ACT SCRIPT. Detailed multi-scene timeline (5+ scenes)."
 
-                res_text = ""
-                
                 while attempt < max_attempts and not passed_gate:
                     attempt += 1
                     status_box.markdown(f"🔄 **Screenplay Generation: Loop {attempt}/{max_attempts}...**")
                     
                     try:
+                        # Prompt ထဲမှာ မူပိုင်ခွင့်မငြိအောင် Highly Original ရေးခိုင်းသည့် စာသား ညှပ်ထည့်ထားပါတယ်
                         story_command = f"""
-                        Write a movie screenplay based on: '{story_concept}'. 
+                        Write a 100% highly original, creative fictional movie screenplay based loosely on: '{story_concept}'. 
+                        Do NOT copy any existing real-world movies, copyrighted dialogues, or books. Make it unique.
                         Genre: {combo_genre}. Language: Write in {story_language}.
                         Scale Constraint: {length_instruction}
                         
@@ -100,22 +98,26 @@ if st.session_state.story_stage == "input":
                         📖 FULL SCREENPLAY: [Write scene headings and character dialogues]
                         """
                         response = model.generate_content(story_command)
+                        
+                        # --- 🛡️ CRITICAL SAFETY CHECK FOR FINISH_REASON 8 ---
+                        candidate = response.candidates[0]
+                        if candidate.finish_reason.name == "RECITATION" or candidate.finish_reason.value == 8:
+                            st.error(f"⚠️ Loop {attempt}: Gemini Safety Blocked (Reason: RECITATION). တကယ့်ပြင်ပက မူပိုင်ခွင့်ရှိစာသားတွေနဲ့ သွားတူလို့ AI က စာရေးတာကို ရပ်ပစ်လိုက်ပါတယ်။ Story Concept ကို နည်းနည်းပြင်ရေးပေးပါ။")
+                            continue
+                            
                         if response and response.text:
-                            res_text = response.text
                             passed_gate = True
-                            st.session_state.approved_story = res_text.strip()
+                            st.session_state.approved_story = response.text.strip()
                             st.session_state.story_analysis = {"genre": combo_genre}
                             st.session_state.story_stage = "story_ready"
                             break
                     except Exception as loop_err:
-                        st.error(f"⚠️ Loop {attempt} တွင် အမှားရှိပါသည် - API Billing Account သို့မဟုတ် Free Tier Rate Limit Error ကြောင့် ဖြစ်နိုင်ပါသည်။ Details: {str(loop_err)}")
+                        st.error(f"⚠️ Loop {attempt} Error: {str(loop_err)}")
                     time.sleep(1)
                 
                 status_box.empty()
                 if passed_gate:
                     st.rerun()
-                else:
-                    st.error("AI ဇာတ်လမ်း မထုတ်ပေးနိုင်ပါ။ API Key သို့မဟုတ် Billing ကို အခြားအကောင့်ဖြင့် စစ်ဆေးပေးပါ။")
             except Exception as e: st.error(f"Error: {str(e)}")
 
 if st.session_state.story_stage in ["story_ready", "scenes_extracted"]:
@@ -164,7 +166,7 @@ if st.session_state.story_stage in ["story_ready", "scenes_extracted"]:
                             shot_command = f"Create Hollywood shot breakdown with Midjourney prompts for: {scene['content']}"
                             shot_res = model.generate_content(shot_command)
                             st.session_state.scene_boards[idx] = shot_res.text
-                        except Exception as e: st.error(f"API Billing / Connection Error: {str(e)}")
+                        except Exception as e: st.error(f"API Error: {str(e)}")
                 with col2:
                     if idx in st.session_state.scene_boards:
                         st.text_area("Shot Output", value=st.session_state.scene_boards[idx], height=200, key=f"text_{idx}")
