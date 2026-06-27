@@ -17,15 +17,13 @@ custom_css = """
         background-attachment: fixed;
     }
     
-    /* Removed large padding-top to prevent elements from vanishing on mobile */
     .main-content { 
-        padding: 10px; 
-        background-color: rgba(15, 23, 42, 0.6); /* Soft dark overlay over background for better readability */
+        padding: 15px; 
+        background-color: rgba(15, 23, 42, 0.7); 
         border-radius: 16px;
         margin-top: 10px;
     }
     
-    /* High contrast typography rules */
     h1 { 
         color: #ffffff !important; 
         text-align: center; 
@@ -55,7 +53,6 @@ custom_css = """
     }
     div.stButton > button:hover { background: linear-gradient(45deg, #1e40af, #2563eb); transform: translateY(-1px); }
     
-    /* Danger/Reset Button */
     div.stButton > button[data-testid="baseButton-secondary"] {
         background: linear-gradient(45deg, #7f1d1d, #b91c1c) !important; color: white !important;
     }
@@ -203,95 +200,3 @@ if st.session_state.story_stage in ["story_ready", "scenes_extracted"]:
     """, unsafe_allow_html=True)
     
     st.markdown("<h3 style='color: white;'>📖 Approved Screenplay Script</h3>", unsafe_allow_html=True)
-    st.text_area("Story View", value=st.session_state.approved_story, height=200, label_visibility="collapsed")
-    
-    if st.button("❌ Discard Project & Go Back to Start"):
-        st.session_state.story_stage = "input"
-        st.session_state.approved_story = ""
-        st.session_state.extracted_scenes = []
-        st.session_state.scene_boards = {}
-        st.rerun()
-
-    st.markdown("<br><hr/>", unsafe_allow_html=True)
-
-    # --- STEP 2: CHUNK SCENES ---
-    if st.session_state.story_stage == "story_ready":
-        st.markdown("<h4 style='color: white;'>🎬 Step 2: Extracting Screenplay Scene Blocks</h4>", unsafe_allow_html=True)
-        if st.button("Separate Screenplay Into Scene Chunks"):
-            try:
-                genai.configure(api_key=user_api_key)
-                model = genai.GenerativeModel('gemini-2.5-flash')
-                
-                chunk_command = f"""
-                You are a film editor. Read this screenplay script: '{st.session_state.approved_story}'
-                Break it down strictly into chronological sequential individual scenes, preserving all character action lines and dialogues.
-                Output exactly in this format for parsing:
-                SCENE_BLOCK_START
-                Scene [Number]: [Location/Context Summary]
-                Content: [The exact screenplay dialogue/action excerpt belonging to this scene]
-                SCENE_BLOCK_END
-                """
-                res = model.generate_content(chunk_command)
-                raw_scenes = re.findall(r"SCENE_BLOCK_START(.*?)SCENE_BLOCK_END", res.text, flags=re.DOTALL)
-                
-                scenes_list = []
-                for s in raw_scenes:
-                    title_match = re.search(r"Scene \d+:.*", s)
-                    content_match = re.search(r"Content:\s*(.*)", s, flags=re.DOTALL)
-                    if title_match and content_match:
-                        scenes_list.append({"title": title_match.group(0).strip(), "content": content_match.group(1).strip()})
-                
-                if scenes_list:
-                    st.session_state.extracted_scenes = scenes_list
-                    st.session_state.story_stage = "scenes_extracted"
-                    st.rerun()
-                else:
-                    st.error("Screenplay parsing error. Please try again.")
-            except Exception as e: st.error(f"Error: {str(e)}")
-
-    # --- STEP 3: INTERACTIVE SCENE SHOT LIST WITH TIMED PROMPTS ---
-    if st.session_state.story_stage == "scenes_extracted":
-        st.markdown("<h3 style='color: white;'>🎬 Continuity Production Board</h3>", unsafe_allow_html=True)
-        
-        if "Disney" in art_style:
-            mj_style = "3D Pixar Disney Animation Style, Vibrant Clay Render, Raytracing"
-            v_style = "Disney Pixar Animation Style, Smooth Motion"
-        elif "Anime" in art_style:
-            mj_style = "Anime Key Visual, Sharp Lineart, Vibrant Colors, --niji 6"
-            v_style = "Anime Motion, Fluent 2D Animation"
-        else:
-            mj_style = "Cinematic Still, Film Grain, 8k Resolution, Photorealistic, --style raw --v 6.0"
-            v_style = "Cinematic Movie Style, Photorealistic, Masterpiece Motion"
-
-        for idx, scene in enumerate(st.session_state.extracted_scenes):
-            with st.container():
-                st.markdown(f"<div class='scene-box'><h4>📌 {scene['title']}</h4><p style='white-space: pre-wrap;'>{scene['content']}</p></div>", unsafe_allow_html=True)
-                
-                col1, col2 = st.columns([1, 4])
-                with col1:
-                    if st.button(f"🎬 Generate Shots", key=f"gen_{idx}"):
-                        try:
-                            genai.configure(api_key=user_api_key)
-                            model = genai.GenerativeModel('gemini-2.5-flash')
-                            
-                            character_lock = f"Maintain strict character consistency: {char_profile}." if char_profile else ""
-                            
-                            shot_command = f"""
-                            You are a Hollywood Director of Photography. Write a comprehensive Shot-by-Shot breakdown for this specific screenplay scene segment:
-                            Title: {scene['title']}
-                            Content: {scene['content']}
-                            
-                            CRITICAL LAWS FOR ACTION, DIALOGUE & DURATION PROMPTS:
-                            1. DURATION RULE: Every single shot MUST explicitly contain an estimated realistic duration timestamp in seconds (e.g., [Duration: 4 Seconds], [Duration: 6 Seconds]) depending on dialogue length and action complexity.
-                            2. CHARACTER LOCK RULE: {character_lock} Every single Image and Video prompt must explicitly start by describing the character exactly as defined.
-                            3. KINETIC ACTION RULE: Video Prompts must show active character motion (e.g., slamming hand on table, pacing anxiously, drawing a weapon) based on the scene's action lines. Avoid static shots.
-                            4. DIALOGUE INJECTION RULE: If a character has a dialogue in this shot, the Video Prompt MUST explicitly include specific speaking facial motion (e.g., 'delivering dramatic dialogue with intense speaking lip sync expression', 'shouting angrily with mouth open delivering dialogue').
-                            5. Language: Narration, Action Description, and Dialogue lines in {story_language}. Technical prompts in English.
-                            
-                            Format per Shot:
-                            * SHOT [Scene Number].[Shot Number] - [Duration: X Seconds]
-                            * Camera Shot Type: [e.g. Medium Close Up, Over the Shoulder Shot]
-                            * Action & Dialogue Description: [Detailed Myanmar description of what the character is doing and saying]
-                            * 👥 DIALOGUE/NARRATION: [Character Name]: "[Dialogue text]"
-                            * 🎨 Image Prompt (Midjourney): [Character Description], [Exact physical action/facial expression], [Setting], [Framing], [Lighting], {mj_style} --ar {image_ratio}
-                            * 🎥 Video Prompt & Direction (Runway/Luma): [Camera Movement],
