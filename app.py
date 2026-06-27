@@ -145,6 +145,10 @@ if st.session_state.story_stage == "input":
                 elif total_target_seconds <= 300: length_instruction = "MEDIUM SCREENPLAY. 3-4 structured dramatic scenes with deep character interactions, character physical movements, and high-stakes dialogues."
                 else: length_instruction = f"EPIC MULTI-ACT SCRIPT. A highly detailed multi-scene screenplay timeline with dense situational character action, dialogue exchanges, and world-building blocks tailored for {duration_min} minutes."
 
+                res_text = ""
+                twist_s, depth_s = 5, 5
+                reason = "Pending initialization."
+
                 while attempt < max_attempts and not passed_gate:
                     attempt += 1
                     status_box.markdown(f"🧠 **AI Director (Script Loop {attempt}/{max_attempts}):** Designing Screenplay & Dialogues...")
@@ -187,11 +191,148 @@ if st.session_state.story_stage == "input":
                     time.sleep(0.3)
                 
                 status_box.empty()
-                if not passed_gate:
+                if not passed_gate and res_text:
+                    final_rating = (twist_s + depth_s) / 2.0
                     st.session_state.approved_story = re.sub(r"CRITIQUE_START.*?CRITIQUE_END", "", res_text, flags=re.DOTALL).strip()
                     st.session_state.story_analysis = {"rating": final_rating, "twist": twist_s, "depth": depth_s, "reason": "Fallback.", "genre": combo_genre}
                     st.session_state.story_stage = "story_ready"
+                elif not passed_gate and not res_text:
+                    st.error("AI က ဇာတ်လမ်းထုတ်လုပ်ပေးနိုင်ခြင်းမရှိပါ။ ကျေးဇူးပြု၍ ပြန်လည်ကြိုးစားပါ။")
+                    st.stop()
+                    
                 st.rerun()
             except Exception as e: st.error(f"Error: {str(e)}")
 
-# --- DISPLAY SCREENPLAY & SCENE
+# --- DISPLAY SCREENPLAY & SCENE CHUNKER ---
+if st.session_state.story_stage in ["story_ready", "scenes_extracted"]:
+    analysis = st.session_state.story_analysis
+    st.markdown(f"""
+    <div class="critique-card">
+        <h4 style="color: #ffbc00; margin-top:0;">🛡️ AI Director Critic Board</h4>
+        <p><b>🎭 Genre:</b> {analysis['genre']} | <b>⏱️ Duration:</b> {duration_min}m {duration_sec}s | <b>⭐ IMDb Rating:</b> {analysis['rating']}/10</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("<h3 style='color: white;'>📖 Approved Screenplay Script</h3>", unsafe_allow_html=True)
+    st.text_area("Story View", value=st.session_state.approved_story, height=200, label_visibility="collapsed")
+    
+    if st.button("❌ Discard Project & Go Back to Start"):
+        st.session_state.story_stage = "input"
+        st.session_state.approved_story = ""
+        st.session_state.extracted_scenes = []
+        st.session_state.scene_boards = {}
+        st.rerun()
+
+    st.markdown("<br><hr/>", unsafe_allow_html=True)
+
+    # --- STEP 2: CHUNK SCENES ---
+    if st.session_state.story_stage == "story_ready":
+        st.markdown("<h4 style='color: white;'>🎬 Step 2: Extracting Screenplay Scene Blocks</h4>", unsafe_allow_html=True)
+        if st.button("Separate Screenplay Into Scene Chunks"):
+            try:
+                genai.configure(api_key=user_api_key)
+                model = genai.GenerativeModel('gemini-2.5-flash')
+                
+                chunk_command = f"""
+                You are a film editor. Read this screenplay script: '{st.session_state.approved_story}'
+                Break it down strictly into chronological sequential individual scenes, preserving all character action lines and dialogues.
+                Output exactly in this format for parsing:
+                SCENE_BLOCK_START
+                Scene [Number]: [Location/Context Summary]
+                Content: [The exact screenplay dialogue/action excerpt belonging to this scene]
+                SCENE_BLOCK_END
+                """
+                res = model.generate_content(chunk_command)
+                raw_scenes = re.findall(r"SCENE_BLOCK_START(.*?)SCENE_BLOCK_END", res.text, flags=re.DOTALL)
+                
+                scenes_list = []
+                for s in raw_scenes:
+                    title_match = re.search(r"Scene \d+:.*", s)
+                    content_match = re.search(r"Content:\s*(.*)", s, flags=re.DOTALL)
+                    if title_match and content_match:
+                        scenes_list.append({"title": title_match.group(0).strip(), "content": content_match.group(1).strip()})
+                
+                if scenes_list:
+                    st.session_state.extracted_scenes = scenes_list
+                    st.session_state.story_stage = "scenes_extracted"
+                    st.rerun()
+                else:
+                    st.error("Screenplay parsing error. Please try again.")
+            except Exception as e: st.error(f"Error: {str(e)}")
+
+    # --- STEP 3: INTERACTIVE SCENE SHOT LIST WITH SEPARATED CHARACTER PROMPTS & SOUND STYLE ---
+    if st.session_state.story_stage == "scenes_extracted":
+        st.markdown("<h3 style='color: white;'>🎬 Continuity Production Board</h3>", unsafe_allow_html=True)
+        
+        if "Disney" in art_style:
+            mj_style = "3D Pixar Disney Animation Style, Vibrant Clay Render, Raytracing"
+            v_style = "Disney Pixar Animation Style, Smooth Motion"
+        elif "Anime" in art_style:
+            mj_style = "Anime Key Visual, Sharp Lineart, Vibrant Colors, --niji 6"
+            v_style = "Anime Motion, Fluent 2D Animation"
+        else:
+            mj_style = "Cinematic Still, Film Grain, 8k Resolution, Photorealistic, --style raw --v 6.0"
+            v_style = "Cinematic Movie Style, Photorealistic, Masterpiece Motion"
+
+        for idx, scene in enumerate(st.session_state.extracted_scenes):
+            with st.container():
+                st.markdown(f"<div class='scene-box'><h4>📌 {scene['title']}</h4><p style='white-space: pre-wrap;'>{scene['content']}</p></div>", unsafe_allow_html=True)
+                
+                col1, col2 = st.columns([1, 4])
+                with col1:
+                    if st.button(f"🎬 Generate Shots", key=f"gen_{idx}"):
+                        try:
+                            genai.configure(api_key=user_api_key)
+                            model = genai.GenerativeModel('gemini-2.5-flash')
+                            
+                            character_lock = f"Maintain strict character consistency: {char_profile}." if char_profile else "Ensure unified style consistency."
+                            
+                            shot_command = """
+                            You are a Hollywood Director of Photography, Character Concept Artist, and Sound Designer. Write a comprehensive Shot-by-Shot breakdown for this specific screenplay scene segment:
+                            Title: {scene_title}
+                            Content: {scene_content}
+                            
+                            CRITICAL FORMATTING LAWS:
+                            1. CHARACTER PROFILES SEPARATION: At the very top of your output, before listing any shots, you MUST create a '👥 CHARACTER CONCEPT ART PROFILES' section. Extract all key characters appearing in this scene and create a dedicated, standalone Midjourney reference prompt for each character detailing their unique visual features, facial features, hair style, and specific outfit style matching the context.
+                            2. DURATION RULE: Every single shot MUST explicitly contain an estimated realistic duration timestamp in seconds (e.g., [Duration: 4 Seconds], [Duration: 6 Seconds]) depending on dialogue length and action complexity.
+                            3. CHARACTER LOCK RULE: {character_lock_clause} Every single Image and Video prompt must explicitly start by describing the character exactly as defined.
+                            4. KINETIC ACTION RULE: Video Prompts must show active character motion (e.g., slamming hand on table, pacing anxiously, drawing a weapon) based on the scene's action lines. Avoid static shots.
+                            5. DIALOGUE INJECTION RULE: If a character has a dialogue in this shot, the Video Prompt MUST explicitly include specific speaking facial motion (e.g., 'delivering dramatic dialogue with intense speaking lip sync expression', 'shouting angrily with mouth open delivering dialogue').
+                            6. SOUND STYLE RULE: Every shot MUST include a detailed music/sound design instruction (Suno/Udio audio prompt format + voice emotional tone direction) under the Sound Style section.
+                            7. Language: Narration, Action Description, and Dialogue lines in {story_lang}. Technical prompts in English.
+                            
+                            Structure Your Entire Response Exactly Like This:
+                            👥 CHARACTER CONCEPT ART PROFILES:
+                            * [Character Name]: [Detailed Midjourney visual prompt describing their physical features, clothing, and overall appearance for character reference sheet], Style: {art_mj_style} (Aspect Ratio 1:1)
+                            
+                            --------------------------------------------------
+                            
+                            🎬 SHOT LIST BREAKDOWN:
+                            * SHOT [Scene Number].[Shot Number] - [Duration: X Seconds]
+                            * Camera Shot Type: [e.g. Medium Close Up, Over the Shoulder Shot]
+                            * Action & Dialogue Description: [Detailed Description of what the character is doing and saying]
+                            * 👥 DIALOGUE/NARRATION: [Character Name]: "[Dialogue text]"
+                            * 🎨 Image Prompt (Midjourney): [Character Name Description from profile], [Exact physical action/facial expression in this shot], [Setting], [Framing], [Lighting], Style: {art_mj_style} (Aspect Ratio: {art_ratio})
+                            * 🎥 Video Prompt & Direction (Runway/Luma): [Camera Movement], [Character Name Description + Explicit Kinetic Action or Lip-sync Speaking Expression matching the dialogue], [Dynamic environment], Motion Style: {art_v_style}
+                            * 🎵 Sound Style & SFX/Solfeggio: [Character voice tone delivery description, e.g. 'husky whisper with deep breath effects'] + [Audio generation prompt for background atmosphere score and sound effects, e.g., 'Dark cinematic synth drone, suspenseful sub-bass impact, distant wind rustling, high quality audio']
+                            """.format(
+                                scene_title=scene['title'],
+                                scene_content=scene['content'],
+                                character_lock_clause=character_lock,
+                                story_lang=story_language,
+                                art_mj_style=mj_style,
+                                art_ratio=image_ratio,
+                                art_v_style=v_style
+                            )
+                            
+                            with st.spinner(f"{scene['title']} အတွက် Sound Style ပါဝင်သော Prompts များကို ထုတ်လုပ်နေသည်..."):
+                                shot_res = model.generate_content(shot_command)
+                                st.session_state.scene_boards[idx] = shot_res.text
+                        except Exception as e: st.error(f"Error: {str(e)}")
+                
+                with col2:
+                    if idx in st.session_state.scene_boards:
+                        st.text_area("Shot Output", value=st.session_state.scene_boards[idx], height=300, key=f"text_{idx}")
+                        st.download_button(label=f"📥 Download {scene['title']} Board", data=st.session_state.scene_boards[idx], file_name=f"scene_{idx}_board.txt", key=f"dl_{idx}")
+
+st.markdown("</div>", unsafe_allow_html=True)
