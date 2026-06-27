@@ -6,10 +6,8 @@ import re
 import base64
 import os
 
-# --- Page Config ---
 st.set_page_config(page_title="AI Director Master Shot-List Studio", layout="wide")
 
-# --- Local Image Reader Function ---
 def get_base64_of_bin_file(bin_file):
     with open(bin_file, 'rb') as f:
         data = f.read()
@@ -22,116 +20,54 @@ if os.path.exists(image_file):
 else:
     bg_img_style = "background-image: url('https://w0.peakpx.com/wallpaper/705/104/HD-wallpaper-anime-girls-playing-games-bed-short-hair-blond.jpg');"
 
-# --- Custom CSS Stylesheet ---
 custom_css = f"""
 <style>
-    .stApp {{
-        {bg_img_style}
-        background-size: cover; 
-        background-position: center top; 
-        background-attachment: fixed;
-    }}
-    
-    .main-content {{ 
-        padding: 15px; 
-        background-color: rgba(15, 23, 42, 0.7); 
-        border-radius: 16px;
-        margin-top: 10px;
-    }}
-    
-    h1 {{ 
-        color: #ffffff !important; 
-        text-align: center; 
-        font-family: 'Helvetica Neue', sans-serif; 
-        font-weight: 800; 
-        letter-spacing: 1px; 
-        margin-bottom: 5px; 
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.9);
-    }}
-    .sub-text {{ 
-        text-align: center; 
-        color: #ffbc00 !important; 
-        font-size: 16px; 
-        margin-bottom: 25px; 
-        font-weight: 700; 
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.9);
-    }}
-    
-    .stTextInput > div > div > input {{
-        border-radius: 12px; background-color: rgba(255, 255, 255, 0.95);
-        color: #0f172a !important; border: 2px solid #334155; padding: 14px 20px; font-weight: 600; caret-color: #000000 !important;
-    }}
-    
-    div.stButton > button {{
-        background: linear-gradient(45deg, #0f172a, #1e40af); color: white !important;
-        font-weight: bold; font-size: 15px; border-radius: 25px; width: 100% !important; border: none; padding: 12px 25px !important; transition: all 0.3s ease;
-    }}
-    div.stButton > button:hover {{ background: linear-gradient(45deg, #1e40af, #2563eb); transform: translateY(-1px); }}
-    
-    [data-testid="stSidebar"] {{ background-color: rgba(15, 23, 42, 0.95) !important; border-right: 1px solid #1e293b; }}
-    [data-testid="stSidebar"] .stMarkdown h2 {{ color: #ffbc00 !important; font-weight: bold; }}
-    [data-testid="stSidebar"] label {{ color: #f8fafc !important; font-weight: 600 !important; }}
-    
-    .stTextArea textarea {{
-        background-color: rgba(255, 255, 255, 0.98) !important; color: #0f172a !important;
-        font-size: 11pt !important; line-height: 1.7 !important; border: 2px solid #cbd5e1 !important; border-radius: 12px !important; padding: 15px !important; caret-color: #000000 !important;
-    }}
-    
-    .critique-card {{ background-color: rgba(15, 23, 42, 0.9); border: 2px solid #ffbc00; border-radius: 12px; padding: 20px; margin-bottom: 20px; color: #f8fafc; }}
-    .scene-box {{ background-color: rgba(255, 255, 255, 0.95); border-left: 5px solid #1e40af; padding: 15px; border-radius: 8px; margin-bottom: 15px; color: #0f172a; }}
+    .stApp {{ {bg_img_style} background-size: cover; background-position: center top; background-attachment: fixed; }}
+    .main-content {{ padding: 15px; background-color: rgba(15, 23, 42, 0.7); border-radius: 16px; margin-top: 10px; }}
+    h1 {{ color: #ffffff !important; text-align: center; font-family: 'Helvetica Neue', sans-serif; font-weight: 800; text-shadow: 2px 2px 4px rgba(0,0,0,0.9); }}
+    .sub-text {{ text-align: center; color: #ffbc00 !important; font-size: 16px; margin-bottom: 25px; font-weight: 700; text-shadow: 2px 2px 4px rgba(0,0,0,0.9); }}
+    .stTextInput > div > div > input {{ border-radius: 12px; background-color: rgba(255, 255, 255, 0.95); color: #0f172a !important; font-weight: 600; caret-color: #000000 !important; }}
+    div.stButton > button {{ background: linear-gradient(45deg, #0f172a, #1e40af); color: white !important; font-weight: bold; border-radius: 25px; width: 100% !important; padding: 12px 25px !important; }}
+    [data-testid="stSidebar"] {{ background-color: rgba(15, 23, 42, 0.95) !important; }}
+    .stTextArea textarea {{ background-color: rgba(255, 255, 255, 0.98) !important; color: #0f172a !important; line-height: 1.7 !important; border-radius: 12px !important; padding: 15px !important; }}
+    .critique-card {{ background-color: rgba(15, 23, 42, 0.9); border: 2px solid #ffbc00; border-radius: 12px; padding: 20px; color: #f8fafc; }}
+    .scene-box {{ background-color: rgba(255, 255, 255, 0.95); border-left: 5px solid #1e40af; padding: 15px; border-radius: 8px; color: #0f172a; }}
 </style>
 """
 st.markdown(custom_css, unsafe_allow_html=True)
 
-# --- Session State Management ---
 if "story_stage" not in st.session_state: st.session_state.story_stage = "input"
 if "approved_story" not in st.session_state: st.session_state.approved_story = ""
 if "story_analysis" not in st.session_state: st.session_state.story_analysis = {}
 if "extracted_scenes" not in st.session_state: st.session_state.extracted_scenes = []
 if "scene_boards" not in st.session_state: st.session_state.scene_boards = {}
 
-# --- Sidebar Panel ---
-st.sidebar.markdown("<h2 style='font-size: 22px;'>⚙️ Production Settings</h2>", unsafe_allow_html=True)
+st.sidebar.markdown("<h2>⚙️ Production Settings</h2>", unsafe_allow_html=True)
 story_language = st.sidebar.radio("Output Language", ["Myanmar", "English"])
-st.sidebar.markdown("<hr style='border-color: #1e293b;'/>", unsafe_allow_html=True)
-
-st.sidebar.markdown("<label>⏰ Target Video Duration</label>", unsafe_allow_html=True)
 col_min, col_sec = st.sidebar.columns(2)
-with col_min: duration_min = st.number_input("Minutes (Max 40)", min_value=0, max_value=40, value=1, step=1)
-with col_sec: duration_sec = st.number_input("Seconds", min_value=0, max_value=59, value=0, step=5)
-st.sidebar.markdown("<hr style='border-color: #1e293b;'/>", unsafe_allow_html=True)
+duration_min = col_min.number_input("Minutes", min_value=0, max_value=40, value=1)
+duration_sec = col_sec.number_input("Seconds", min_value=0, max_value=59, value=0)
+char_profile = st.sidebar.text_area("Character Profile", height=100)
+story_type = st.sidebar.selectbox("Genre 1", ["Drama", "Horror", "Romance", "Fantasy", "Sci-Fi", "Comedy", "Action"])
+secondary_type = st.sidebar.selectbox("Genre 2", ["None", "Action", "Drama", "Thriller", "Comedy", "Romance", "Mystery"])
+art_style = st.sidebar.selectbox("Style", ["Japan Animation Style (Anime)", "3D Disney Cartoon Style", "Realistic Cinematic Movie", "Cyberpunk Art"])
+image_ratio = st.sidebar.selectbox("Ratio", ["16:9", "9:16", "4:3", "1:1"])
+user_api_key = st.sidebar.text_input("Gemini API Key", type="password")
 
-st.sidebar.markdown("<label>🎭 Character Reference Profile (Locked for Prompts)</label>", unsafe_allow_html=True)
-char_profile = st.sidebar.text_area(label="Char Profile", placeholder="e.g., A 25-year-old man, brown hair, wearing a rugged blue denim jacket...", height=100, label_visibility="collapsed")
-st.sidebar.markdown("<hr style='border-color: #1e293b;'/>", unsafe_allow_html=True)
-
-story_type = st.sidebar.selectbox("Primary Genre", ["Drama", "Horror", "Romance", "Fantasy", "Sci-Fi", "Comedy", "Action"])
-secondary_type = st.sidebar.selectbox("Secondary Genre (Optional Combo)", ["None", "Action", "Drama", "Thriller", "Comedy", "Romance", "Mystery"])
-art_style = st.sidebar.selectbox("Art Style", ["Japan Animation Style (Anime)", "3D Disney Cartoon Style", "Realistic Cinematic Movie", "Cyberpunk Art"])
-image_ratio = st.sidebar.selectbox("Midjourney Ratio", ["16:9", "9:16", "4:3", "1:1"])
-
-st.sidebar.markdown("<hr style='border-color: #1e293b;'/>", unsafe_allow_html=True)
-user_api_key = st.sidebar.text_input("Enter Gemini API Key", type="password")
-
-# --- Main Interface Wrapper ---
 st.markdown("<div class='main-content'>", unsafe_allow_html=True)
 st.title("Director's Master Script & Shot Board")
-st.markdown("<div class='sub-text'>Dialogue, Action & Time-Synced Production Suite</div>", unsafe_allow_html=True)
 
-st.caption(f"**Current Workspace Status:** Active Stage - `{st.session_state.story_stage.upper()}`")
-
-# --- STEP 1: GENERATE SCREENPLAY SCRIPT ---
 if st.session_state.story_stage == "input":
-    story_concept = st.text_input("Story Concept", placeholder="ဇတ်လမ်းအကျဉ်း (ဘာမှမရေးဘဲ နှိပ်ပါက AI က ဂျန်ရာအလိုက် အလိုအလျောက် ကြံဆပေးမည်)", label_visibility="collapsed")
+    story_concept = st.text_input("Story Concept", placeholder="ဇတ်လမ်းအကျဉ်း")
     total_target_seconds = (duration_min * 60) + duration_sec
     
     if st.button("Step 1: Brainstorm Master Screenplay"):
         if not user_api_key: st.error("API Key လိုအပ်ပါသည်။")
-        elif total_target_seconds == 0: st.error("ကျေးဇူးပြု၍ အချိန်တစ်ခု သတ်မှတ်ပေးပါဗျာ။")
+        elif total_target_seconds == 0: st.error("ကျေးဇူးပြု၍ အချိန်သတ်မှတ်ပေးပါ။")
         else:
             try:
                 genai.configure(api_key=user_api_key)
-                model = genai.GenerativeModel('gemini-2.5-flash', generation_config={"temperature": 0.95})
+                model = genai.GenerativeModel('gemini-2.5-flash')
                 
                 max_attempts = 5
                 attempt = 0
@@ -139,109 +75,66 @@ if st.session_state.story_stage == "input":
                 status_box = st.empty()
                 combo_genre = story_type if secondary_type == "None" else f"{story_type} + {secondary_type}"
                 
-                concept_clause = f"based on this raw user concept: '{story_concept}'" if story_concept.strip() else f"based completely on your own highly original and creative brainstormed premise for the selected genre context."
-                
-                if total_target_seconds <= 60: length_instruction = "SHORT SCREENPLAY. 1-2 distinct scenes with immediate action, punchy characters dialogues, and a sharp plot twist."
-                elif total_target_seconds <= 300: length_instruction = "MEDIUM SCREENPLAY. 3-4 structured dramatic scenes with deep character interactions, character physical movements, and high-stakes dialogues."
-                else: length_instruction = f"EPIC MULTI-ACT SCRIPT. A highly detailed multi-scene screenplay timeline with dense situational character action, dialogue exchanges, and world-building blocks tailored for {duration_min} minutes."
+                # အစ်ကိုကြီးပြောတဲ့ စက္ကန့်အလိုက် Scene အရေအတွက် သတ်မှတ်ပိုင်းခြားပြီး Try မည့်စနစ်
+                if total_target_seconds <= 60:
+                    length_instruction = "SHORT SCREENPLAY. Must strictly be 1-2 distinct scenes."
+                elif total_target_seconds <= 300:
+                    length_instruction = "MEDIUM SCREENPLAY. Must strictly be 3-4 structured scenes."
+                else:
+                    length_instruction = "EPIC MULTI-ACT SCRIPT. Detailed multi-scene timeline (5+ scenes)."
 
                 res_text = ""
-                twist_s, depth_s = 5, 5
-                reason = "Pending initialization."
-
+                
                 while attempt < max_attempts and not passed_gate:
                     attempt += 1
-                    status_box.markdown(f"🧠 **AI Director (Script Loop {attempt}/{max_attempts}):** Designing Screenplay & Dialogues...")
+                    status_box.markdown(f"🔄 **Screenplay Generation: Loop {attempt}/{max_attempts}...**")
                     
                     try:
                         story_command = f"""
-                        Write a theatrical movie script/screenplay {concept_clause}. 
+                        Write a movie screenplay based on: '{story_concept}'. 
                         Genre: {combo_genre}. Language: Write in {story_language}.
-                        Constraint: Script scale must follow: {length_instruction}.
+                        Scale Constraint: {length_instruction}
                         
-                        CRITICAL REQUIREMENT: Do NOT write like a storybook/prose. Write it as an interactive screenplay script containing active physical CHARACTER ACTIONS and explicit DIALOGUES between characters.
-                        
-                        Evaluate yourself at the end within these tags:
-                        CRITIQUE_START
-                        Plot Twist Score: [1-10]
-                        Emotional Depth Score: [1-10]
-                        Reasoning: [One sentence in English]
-                        CRITIQUE_END
-                        
-                        Structure:
+                        Format:
                         📌 SCRIPT TITLE: [Title]
-                        📖 FULL SCREENPLAY: [Write utilizing explicit scene headings, character action lines, and character dialogues]
+                        📖 FULL SCREENPLAY: [Write scene headings and character dialogues]
                         """
                         response = model.generate_content(story_command)
-                        res_text = response.text
-                        
-                        twist_s = int(re.search(r"Plot Twist Score:\s*(\d+)", res_text).group(1)) if re.search(r"Plot Twist Score:\s*(\d+)", res_text) else 5
-                        depth_s = int(re.search(r"Emotional Depth Score:\s*(\d+)", res_text).group(1)) if re.search(r"Emotional Depth Score:\s*(\d+)", res_text) else 5
-                        reason = re.search(r"Reasoning:\s*(.*)", res_text).group(1) if re.search(r"Reasoning:\s*(.*)", res_text) else "Standard."
-                        final_rating = (twist_s + depth_s) / 2.0
-                        
-                        if final_rating >= 7.0:
+                        if response and response.text:
+                            res_text = response.text
                             passed_gate = True
-                            st.session_state.approved_story = re.sub(r"CRITIQUE_START.*?CRITIQUE_END", "", res_text, flags=re.DOTALL).strip()
-                            st.session_state.story_analysis = {"rating": final_rating, "twist": twist_s, "depth": depth_s, "reason": reason, "genre": combo_genre}
+                            st.session_state.approved_story = res_text.strip()
+                            st.session_state.story_analysis = {"genre": combo_genre}
                             st.session_state.story_stage = "story_ready"
                             break
                     except Exception as loop_err:
-                        pass
-                    time.sleep(0.3)
+                        st.error(f"⚠️ Loop {attempt} တွင် အမှားရှိပါသည် - API Billing Account သို့မဟုတ် Free Tier Rate Limit Error ကြောင့် ဖြစ်နိုင်ပါသည်။ Details: {str(loop_err)}")
+                    time.sleep(1)
                 
                 status_box.empty()
-                if not passed_gate and res_text:
-                    final_rating = (twist_s + depth_s) / 2.0
-                    st.session_state.approved_story = re.sub(r"CRITIQUE_START.*?CRITIQUE_END", "", res_text, flags=re.DOTALL).strip()
-                    st.session_state.story_analysis = {"rating": final_rating, "twist": twist_s, "depth": depth_s, "reason": "Fallback.", "genre": combo_genre}
-                    st.session_state.story_stage = "story_ready"
-                elif not passed_gate and not res_text:
-                    st.error("AI က ဇာတ်လမ်းထုတ်လုပ်ပေးနိုင်ခြင်းမရှိပါ။ ကျေးဇူးပြု၍ ပြန်လည်ကြိုးစားပါ။")
-                    st.stop()
-                    
-                st.rerun()
+                if passed_gate:
+                    st.rerun()
+                else:
+                    st.error("AI ဇာတ်လမ်း မထုတ်ပေးနိုင်ပါ။ API Key သို့မဟုတ် Billing ကို အခြားအကောင့်ဖြင့် စစ်ဆေးပေးပါ။")
             except Exception as e: st.error(f"Error: {str(e)}")
 
-# --- DISPLAY SCREENPLAY & SCENE CHUNKER ---
 if st.session_state.story_stage in ["story_ready", "scenes_extracted"]:
-    analysis = st.session_state.story_analysis
-    st.markdown(f"""
-    <div class="critique-card">
-        <h4 style="color: #ffbc00; margin-top:0;">🛡️ AI Director Critic Board</h4>
-        <p><b>🎭 Genre:</b> {analysis['genre']} | <b>⏱️ Duration:</b> {duration_min}m {duration_sec}s | <b>⭐ IMDb Rating:</b> {analysis['rating']}/10</p>
-    </div>
-    """, unsafe_allow_html=True)
-    
     st.markdown("<h3 style='color: white;'>📖 Approved Screenplay Script</h3>", unsafe_allow_html=True)
     st.text_area("Story View", value=st.session_state.approved_story, height=200, label_visibility="collapsed")
     
-    if st.button("❌ Discard Project & Go Back to Start"):
+    if st.button("❌ Discard Project"):
         st.session_state.story_stage = "input"
         st.session_state.approved_story = ""
         st.session_state.extracted_scenes = []
         st.session_state.scene_boards = {}
         st.rerun()
 
-    st.markdown("<br><hr/>", unsafe_allow_html=True)
-
-    # --- STEP 2: CHUNK SCENES ---
     if st.session_state.story_stage == "story_ready":
-        st.markdown("<h4 style='color: white;'>🎬 Step 2: Extracting Screenplay Scene Blocks</h4>", unsafe_allow_html=True)
         if st.button("Separate Screenplay Into Scene Chunks"):
             try:
                 genai.configure(api_key=user_api_key)
                 model = genai.GenerativeModel('gemini-2.5-flash')
-                
-                chunk_command = f"""
-                You are a film editor. Read this screenplay script: '{st.session_state.approved_story}'
-                Break it down strictly into chronological sequential individual scenes, preserving all character action lines and dialogues.
-                Output exactly in this format for parsing:
-                SCENE_BLOCK_START
-                Scene [Number]: [Location/Context Summary]
-                Content: [The exact screenplay dialogue/action excerpt belonging to this scene]
-                SCENE_BLOCK_END
-                """
+                chunk_command = f"Break this script into logical individual scenes using format SCENE_BLOCK_START Scene X: Description Content: Text SCENE_BLOCK_END. Script: {st.session_state.approved_story}"
                 res = model.generate_content(chunk_command)
                 raw_scenes = re.findall(r"SCENE_BLOCK_START(.*?)SCENE_BLOCK_END", res.text, flags=re.DOTALL)
                 
@@ -256,83 +149,24 @@ if st.session_state.story_stage in ["story_ready", "scenes_extracted"]:
                     st.session_state.extracted_scenes = scenes_list
                     st.session_state.story_stage = "scenes_extracted"
                     st.rerun()
-                else:
-                    st.error("Screenplay parsing error. Please try again.")
             except Exception as e: st.error(f"Error: {str(e)}")
 
-    # --- STEP 3: INTERACTIVE SCENE SHOT LIST WITH SEPARATED CHARACTER PROMPTS & SOUND STYLE ---
     if st.session_state.story_stage == "scenes_extracted":
-        st.markdown("<h3 style='color: white;'>🎬 Continuity Production Board</h3>", unsafe_allow_html=True)
-        
-        if "Disney" in art_style:
-            mj_style = "3D Pixar Disney Animation Style, Vibrant Clay Render, Raytracing"
-            v_style = "Disney Pixar Animation Style, Smooth Motion"
-        elif "Anime" in art_style:
-            mj_style = "Anime Key Visual, Sharp Lineart, Vibrant Colors, --niji 6"
-            v_style = "Anime Motion, Fluent 2D Animation"
-        else:
-            mj_style = "Cinematic Still, Film Grain, 8k Resolution, Photorealistic, --style raw --v 6.0"
-            v_style = "Cinematic Movie Style, Photorealistic, Masterpiece Motion"
-
         for idx, scene in enumerate(st.session_state.extracted_scenes):
             with st.container():
-                st.markdown(f"<div class='scene-box'><h4>📌 {scene['title']}</h4><p style='white-space: pre-wrap;'>{scene['content']}</p></div>", unsafe_allow_html=True)
-                
+                st.markdown(f"<div class='scene-box'><h4>📌 {scene['title']}</h4><p>{scene['content']}</p></div>", unsafe_allow_html=True)
                 col1, col2 = st.columns([1, 4])
                 with col1:
                     if st.button(f"🎬 Generate Shots", key=f"gen_{idx}"):
                         try:
                             genai.configure(api_key=user_api_key)
                             model = genai.GenerativeModel('gemini-2.5-flash')
-                            
-                            character_lock = f"Maintain strict character consistency: {char_profile}." if char_profile else "Ensure unified style consistency."
-                            
-                            shot_command = """
-                            You are a Hollywood Director of Photography, Character Concept Artist, and Sound Designer. Write a comprehensive Shot-by-Shot breakdown for this specific screenplay scene segment:
-                            Title: {scene_title}
-                            Content: {scene_content}
-                            
-                            CRITICAL FORMATTING LAWS:
-                            1. CHARACTER PROFILES SEPARATION: At the very top of your output, before listing any shots, you MUST create a '👥 CHARACTER CONCEPT ART PROFILES' section. Extract all key characters appearing in this scene and create a dedicated, standalone Midjourney reference prompt for each character detailing their unique visual features, facial features, hair style, and specific outfit style matching the context.
-                            2. DURATION RULE: Every single shot MUST explicitly contain an estimated realistic duration timestamp in seconds (e.g., [Duration: 4 Seconds], [Duration: 6 Seconds]) depending on dialogue length and action complexity.
-                            3. CHARACTER LOCK RULE: {character_lock_clause} Every single Image and Video prompt must explicitly start by describing the character exactly as defined.
-                            4. KINETIC ACTION RULE: Video Prompts must show active character motion (e.g., slamming hand on table, pacing anxiously, drawing a weapon) based on the scene's action lines. Avoid static shots.
-                            5. DIALOGUE INJECTION RULE: If a character has a dialogue in this shot, the Video Prompt MUST explicitly include specific speaking facial motion (e.g., 'delivering dramatic dialogue with intense speaking lip sync expression', 'shouting angrily with mouth open delivering dialogue').
-                            6. SOUND STYLE RULE: Every shot MUST include a detailed music/sound design instruction (Suno/Udio audio prompt format + voice emotional tone direction) under the Sound Style section.
-                            7. Language: Narration, Action Description, and Dialogue lines in {story_lang}. Technical prompts in English.
-                            
-                            Structure Your Entire Response Exactly Like This:
-                            👥 CHARACTER CONCEPT ART PROFILES:
-                            * [Character Name]: [Detailed Midjourney visual prompt describing their physical features, clothing, and overall appearance for character reference sheet], Style: {art_mj_style} (Aspect Ratio 1:1)
-                            
-                            --------------------------------------------------
-                            
-                            🎬 SHOT LIST BREAKDOWN:
-                            * SHOT [Scene Number].[Shot Number] - [Duration: X Seconds]
-                            * Camera Shot Type: [e.g. Medium Close Up, Over the Shoulder Shot]
-                            * Action & Dialogue Description: [Detailed Description of what the character is doing and saying]
-                            * 👥 DIALOGUE/NARRATION: [Character Name]: "[Dialogue text]"
-                            * 🎨 Image Prompt (Midjourney): [Character Name Description from profile], [Exact physical action/facial expression in this shot], [Setting], [Framing], [Lighting], Style: {art_mj_style} (Aspect Ratio: {art_ratio})
-                            * 🎥 Video Prompt & Direction (Runway/Luma): [Camera Movement], [Character Name Description + Explicit Kinetic Action or Lip-sync Speaking Expression matching the dialogue], [Dynamic environment], Motion Style: {art_v_style}
-                            * 🎵 Sound Style & SFX/Solfeggio: [Character voice tone delivery description, e.g. 'husky whisper with deep breath effects'] + [Audio generation prompt for background atmosphere score and sound effects, e.g., 'Dark cinematic synth drone, suspenseful sub-bass impact, distant wind rustling, high quality audio']
-                            """.format(
-                                scene_title=scene['title'],
-                                scene_content=scene['content'],
-                                character_lock_clause=character_lock,
-                                story_lang=story_language,
-                                art_mj_style=mj_style,
-                                art_ratio=image_ratio,
-                                art_v_style=v_style
-                            )
-                            
-                            with st.spinner(f"{scene['title']} အတွက် Sound Style ပါဝင်သော Prompts များကို ထုတ်လုပ်နေသည်..."):
-                                shot_res = model.generate_content(shot_command)
-                                st.session_state.scene_boards[idx] = shot_res.text
-                        except Exception as e: st.error(f"Error: {str(e)}")
-                
+                            shot_command = f"Create Hollywood shot breakdown with Midjourney prompts for: {scene['content']}"
+                            shot_res = model.generate_content(shot_command)
+                            st.session_state.scene_boards[idx] = shot_res.text
+                        except Exception as e: st.error(f"API Billing / Connection Error: {str(e)}")
                 with col2:
                     if idx in st.session_state.scene_boards:
-                        st.text_area("Shot Output", value=st.session_state.scene_boards[idx], height=300, key=f"text_{idx}")
-                        st.download_button(label=f"📥 Download {scene['title']} Board", data=st.session_state.scene_boards[idx], file_name=f"scene_{idx}_board.txt", key=f"dl_{idx}")
+                        st.text_area("Shot Output", value=st.session_state.scene_boards[idx], height=200, key=f"text_{idx}")
 
 st.markdown("</div>", unsafe_allow_html=True)
