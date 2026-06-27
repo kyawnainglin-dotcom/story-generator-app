@@ -98,9 +98,9 @@ if st.session_state.story_stage == "input":
                         """
                         response = model.generate_content(story_command)
                         
-                        candidate = response.candidates[0]
-                        if candidate.finish_reason.name == "RECITATION" or candidate.finish_reason.value == 8:
-                            st.error(f"⚠️ Loop {attempt}: Gemini Safety Blocked (Reason: RECITATION). စာသားတွေက ပြင်ပမူပိုင်ခွင့်နဲ့ သွားတူလို့ ရပ်သွားတာပါ။ Story Concept ကို နည်းနည်းပြောင်းရေးပေးပါ။")
+                        # --- 🛡️ STEP 1 RECITATION GUARD ---
+                        if response.candidates and response.candidates[0].finish_reason.name in ["RECITATION", "8"]:
+                            st.error(f"⚠️ Loop {attempt}: Gemini Safety Blocked (Reason: RECITATION). ဇာတ်လမ်းစာသားတွေက အပြင်ကစာတွေနဲ့ သွားတူလို့ ရပ်သွားတာပါ။ Story Concept ကို နည်းနည်းပြောင်းပေးပါ။")
                             continue
                             
                         if response and response.text:
@@ -178,6 +178,8 @@ if st.session_state.story_stage in ["story_ready", "scenes_extracted"]:
                             You are a Hollywood Director of Photography, Character Concept Artist, and Sound Designer. Write a comprehensive Shot-by-Shot breakdown for this segment:
                             Content: {scene_content}
                             
+                            ANTI-RECITATION LAW: Do NOT repeat long string chunks or verbatim expressions that mimic copyrighted materials. Paraphrase and describe scene context dynamically.
+                            
                             CRITICAL LAWS:
                             1. 👥 CHARACTER CONCEPT ART PROFILES: Create a dedicated section at the very top. Extract all key characters and write dedicated Midjourney prompt templates for each based on {char_profile_clause}. Style: {art_mj_style} (Aspect Ratio 1:1)
                             2. 🎵 SOUND STYLE & SFX/Solfeggio: Every single shot MUST contain character voice tone delivery rules and specific prompt parameters tailored for Suno/Udio generation.
@@ -207,14 +209,19 @@ if st.session_state.story_stage in ["story_ready", "scenes_extracted"]:
                             )
                             
                             with st.spinner(f"{scene['title']} အတွက် Features အစုံအလင်ဖြင့် Prompts များ ထုတ်လုပ်နေသည်..."):
-                                shot_res = model.generate_content(shot_command)
-                                st.session_state.scene_boards[idx] = shot_res.text
+                                response = model.generate_content(shot_command)
+                                
+                                # --- 🛡️ STEP 2 SHOT GENERATION RECITATION GUARD ---
+                                if response.candidates and response.candidates[0].finish_reason.name in ["RECITATION", "8"]:
+                                    st.error("⚠️ Gemini Safety Blocked (Reason: RECITATION) ဖြစ်သွားပြန်ပါတယ်။ Shot ထဲက စာသားအချို့က မူပိုင်ခွင့်စနစ်နဲ့ ငြိသွားလို့ပါ။ ကျေးဇူးပြု၍ '🎬 Generate Shots' ခလုတ်ကို နောက်တစ်ကြိမ် ပြန်နှိပ်ပေးပါဗျာ။")
+                                elif response and response.text:
+                                    st.session_state.scene_boards[idx] = response.text.strip()
+                                    st.rerun()
                         except Exception as e: st.error(f"API Error: {str(e)}")
                 
                 with col2:
                     if idx in st.session_state.scene_boards:
                         st.text_area("Shot Output", value=st.session_state.scene_boards[idx], height=250, key=f"text_{idx}")
-                        # 📥 Download Button လေး ပြန်ထည့်ပေးလိုက်ပါပြီ အစ်ကိုကြီး
                         st.download_button(
                             label=f"📥 Download {scene['title']} Board", 
                             data=st.session_state.scene_boards[idx], 
