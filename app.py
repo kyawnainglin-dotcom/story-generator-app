@@ -185,4 +185,11 @@ if st.session_state.story_stage == "input":
                 
                 status_box.empty()
                 if not passed_gate:
-                    st.session_state.approved_story = re.sub(r"CRITIQUE_START.*?CRITIQUE_END", "", res_text,
+                    st.session_state.approved_story = re.sub(r"CRITIQUE_START.*?CRITIQUE_END", "", res_text, flags=re.DOTALL).strip()
+                    st.session_state.story_analysis = {"rating": final_rating, "twist": twist_s, "depth": depth_s, "reason": "Fallback.", "genre": combo_genre}
+                    st.session_state.story_stage = "story_ready"
+                st.rerun()
+            except Exception as e: st.error(f"Error: {str(e)}")
+
+# --- DISPLAY SCREENPLAY & SCENE CHUNKER ---
+if st.session_state.story_
