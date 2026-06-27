@@ -29,6 +29,12 @@ custom_css = """
     }
     div.stButton > button:hover { background: linear-gradient(45deg, #1e40af, #2563eb); transform: translateY(-1px); }
     
+    /* Danger/Reset Button Style */
+    div.stButton > button[data-testid="baseButton-secondary"] {
+        background: linear-gradient(45deg, #7f1d1d, #b91c1c) !important;
+        color: white !important;
+    }
+    
     [data-testid="stSidebar"] { background-color: #0f172a !important; border-right: 1px solid #1e293b; }
     [data-testid="stSidebar"] .stMarkdown h2 { color: #ffbc00 !important; font-weight: bold; }
     [data-testid="stSidebar"] label { color: #f8fafc !important; font-weight: 600 !important; }
@@ -71,22 +77,35 @@ secondary_type = st.sidebar.selectbox("Secondary Genre (Optional Combo)", ["None
 art_style = st.sidebar.selectbox("Art Style", ["Japan Animation Style (Anime)", "3D Disney Cartoon Style", "Realistic Cinematic Movie", "Cyberpunk Art"])
 image_ratio = st.sidebar.selectbox("Midjourney Ratio", ["16:9", "9:16", "4:3", "1:1"])
 
+# Persistent Project Reset Button in Sidebar for Safety
+st.sidebar.markdown("<hr style='border-color: #1e293b;'/>", unsafe_allow_html=True)
+if st.sidebar.button("🔄 Start Entire New Project", type="secondary"):
+    st.session_state.story_stage = "input"
+    st.session_state.approved_story = ""
+    st.session_state.extracted_scenes = []
+    st.session_state.scene_boards = {}
+    st.rerun()
+
 st.sidebar.markdown("<hr style='border-color: #1e293b;'/>", unsafe_allow_html=True)
 user_api_key = st.sidebar.text_input("Enter Gemini API Key", type="password")
 
 # --- Main Interface ---
 st.markdown("<div class='main-content'>", unsafe_allow_html=True)
 st.title("Director's Master Script & Shot Board")
-st.markdown("<div class='sub-text'>Dialogue & Action-Driven AI Production Suite</div>", unsafe_allow_html=True)
+st.markdown("<div class='sub-text'>Dialogue, Action & Time-Synced Production Suite</div>", unsafe_allow_html=True)
 
-story_concept = st.text_input("", placeholder="ဇတ်လမ်းအကျဉ်း သို့မဟုတ် အိုင်ဒီယာ ရေးရန်")
-total_target_seconds = (duration_min * 60) + duration_sec
+# Navigation Banner for Mobile Awareness
+st.caption(f"**Current Workspace Status:** Active Stage - `{st.session_state.story_stage.upper()}`")
 
 # --- STEP 1: GENERATE SCREENPLAY SCRIPT ---
 if st.session_state.story_stage == "input":
+    story_concept = st.text_input("Story Concept", placeholder="ဇတ်လမ်းအကျဉ်း သို့မဟုတ် အိုင်ဒီယာ ရေးရန်", label_visibility="collapsed")
+    total_target_seconds = (duration_min * 60) + duration_sec
+    
     if st.button("Step 1: Brainstorm Master Screenplay"):
         if not user_api_key: st.error("API Key လိုအပ်ပါသည်။")
         elif total_target_seconds == 0: st.error("ကျေးဇူးပြု၍ အချိန်တစ်ခု သတ်မှတ်ပေးပါဗျာ။")
+        elif not story_concept: st.error("ဇာတ်လမ်းအိုင်ဒီယာ တစ်ခုခု အရင်ရိုက်ထည့်ပေးပါဗျာ။")
         else:
             try:
                 genai.configure(api_key=user_api_key)
@@ -160,7 +179,8 @@ if st.session_state.story_stage in ["story_ready", "scenes_extracted"]:
     st.markdown("### 📖 Approved Screenplay Script (Actions & Dialogues Included)")
     st.text_area("Story View", value=st.session_state.approved_story, height=200, label_visibility="collapsed")
     
-    if st.button("❌ Discard & Reset"):
+    # Soft Reset button right on the main interface to clear and start over safely
+    if st.button("❌ Discard Project & Go Back to Start"):
         st.session_state.story_stage = "input"
         st.session_state.approved_story = ""
         st.session_state.extracted_scenes = []
@@ -169,7 +189,7 @@ if st.session_state.story_stage in ["story_ready", "scenes_extracted"]:
 
     st.markdown("<br><hr/>", unsafe_allow_html=True)
 
-    # --- STEP 2: CHUNK SCENES (FIXED LEVEL DETECTION) ---
+    # --- STEP 2: CHUNK SCENES ---
     if st.session_state.story_stage == "story_ready":
         st.markdown("#### 🎬 Step 2: Extracting Screenplay Scene Blocks")
         if st.button("Separate Screenplay Into Scene Chunks"):
@@ -204,9 +224,10 @@ if st.session_state.story_stage in ["story_ready", "scenes_extracted"]:
                     st.error("Screenplay parsing error. Please try again.")
             except Exception as e: st.error(f"Error: {str(e)}")
 
-    # --- STEP 3: INTERACTIVE SCENE SHOT LIST WITH KINETIC ACTION & DIALOGUE PROMPTS ---
+    # --- STEP 3: INTERACTIVE SCENE SHOT LIST WITH TIMED PROMPTS ---
     if st.session_state.story_stage == "scenes_extracted":
-        st.markdown("### 🎬 Continuity Production Board (Dialogue & Action Synced)")
+        st.markdown("### 🎬 Continuity Production Board (Dialogue, Action & Seconds Synced)")
+        st.caption("💡 iPhone အသုံးပြုသူများအတွက် အထူးသီးသန့်- အောက်ပါ ဒေါင်းလုဒ်ခလုတ်ကို နှိပ်ပြီးလျှင် Back Key နှိပ်စရာမလိုဘဲ ဤစာမျက်နှာတွင်တင် ဆက်လက်ရှိနေမည်ဖြစ်ပါသည်။ ပရောဂျက်အသစ် ပြန်စလိုပါက ဘယ်ဘက် Sidebar ရှိ အနီရောင်ခလုတ်ကို သုံးနိုင်ပါသည်။")
         
         if "Disney" in art_style:
             mj_style = "3D Pixar Disney Animation Style, Vibrant Clay Render, Raytracing"
@@ -236,14 +257,15 @@ if st.session_state.story_stage in ["story_ready", "scenes_extracted"]:
                             Title: {scene['title']}
                             Content: {scene['content']}
                             
-                            CRITICAL LAWS FOR ACTION & DIALOGUE PROMPTS:
-                            1. CHARACTER LOCK RULE: {character_lock} Every single Image and Video prompt must explicitly start by describing the character exactly as defined.
-                            2. KINETIC ACTION RULE: Video Prompts must show active character motion (e.g., slamming hand on table, pacing anxiously, drawing a weapon) based on the scene's action lines. Avoid static shots.
-                            3. DIALOGUE INJECTION RULE: If a character has a dialogue in this shot, the Video Prompt MUST explicitly include specific speaking facial motion (e.g., 'delivering dramatic dialogue with intense speaking lip sync expression', 'shouting angrily with mouth open delivering dialogue').
-                            4. Language: Narration, Action Description, and Dialogue lines in {story_language}. Technical prompts in English.
+                            CRITICAL LAWS FOR ACTION, DIALOGUE & DURATION PROMPTS:
+                            1. DURATION RULE: Every single shot MUST explicitly contain an estimated realistic duration timestamp in seconds (e.g., [Duration: 4 Seconds], [Duration: 6 Seconds]) depending on dialogue length and action complexity.
+                            2. CHARACTER LOCK RULE: {character_lock} Every single Image and Video prompt must explicitly start by describing the character exactly as defined.
+                            3. KINETIC ACTION RULE: Video Prompts must show active character motion (e.g., slamming hand on table, pacing anxiously, drawing a weapon) based on the scene's action lines. Avoid static shots.
+                            4. DIALOGUE INJECTION RULE: If a character has a dialogue in this shot, the Video Prompt MUST explicitly include specific speaking facial motion (e.g., 'delivering dramatic dialogue with intense speaking lip sync expression', 'shouting angrily with mouth open delivering dialogue').
+                            5. Language: Narration, Action Description, and Dialogue lines in {story_language}. Technical prompts in English.
                             
                             Format per Shot:
-                            * SHOT [Scene Number].[Shot Number]
+                            * SHOT [Scene Number].[Shot Number] - [Duration: X Seconds]
                             * Camera Shot Type: [e.g. Medium Close Up, Over the Shoulder Shot]
                             * Action & Dialogue Description: [Detailed Myanmar description of what the character is doing and saying]
                             * 👥 DIALOGUE/NARRATION: [Character Name]: "[Dialogue text]"
@@ -251,7 +273,7 @@ if st.session_state.story_stage in ["story_ready", "scenes_extracted"]:
                             * 🎥 Video Prompt & Direction (Runway/Luma): [Camera Movement], [Character Description + Explicit Kinetic Action or Lip-sync Speaking Expression matching the dialogue], [Dynamic environment], {v_style}
                             """
                             
-                            with st.spinner(f"{scene['title']} အတွက် Action/Dialogue Prompts များကို ထုတ်လုပ်နေသည်..."):
+                            with st.spinner(f"{scene['title']} အတွက် Multi-Format Prompts များကို ထုတ်လုပ်နေသည်..."):
                                 shot_res = model.generate_content(shot_command)
                                 st.session_state.scene_boards[idx] = shot_res.text
                         except Exception as e: st.error(f"Error: {str(e)}")
