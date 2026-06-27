@@ -248,7 +248,7 @@ if st.session_state.story_stage in ["story_ready", "scenes_extracted"]:
                     st.error("Screenplay parsing error. Please try again.")
             except Exception as e: st.error(f"Error: {str(e)}")
 
-    # --- STEP 3: INTERACTIVE SCENE SHOT LIST WITH SEPARATED CHARACTER PROMPTS ---
+    # --- STEP 3: INTERACTIVE SCENE SHOT LIST WITH SEPARATED CHARACTER PROMPTS & SOUND STYLE ---
     if st.session_state.story_stage == "scenes_extracted":
         st.markdown("<h3 style='color: white;'>🎬 Continuity Production Board</h3>", unsafe_allow_html=True)
         
@@ -266,60 +266,4 @@ if st.session_state.story_stage in ["story_ready", "scenes_extracted"]:
             with st.container():
                 st.markdown(f"<div class='scene-box'><h4>📌 {scene['title']}</h4><p style='white-space: pre-wrap;'>{scene['content']}</p></div>", unsafe_allow_html=True)
                 
-                col1, col2 = st.columns([1, 4])
-                with col1:
-                    if st.button(f"🎬 Generate Shots", key=f"gen_{idx}"):
-                        try:
-                            genai.configure(api_key=user_api_key)
-                            model = genai.GenerativeModel('gemini-2.5-flash')
-                            
-                            character_lock = f"Maintain strict character consistency: {char_profile}." if char_profile else "Ensure unified style consistency."
-                            
-                            # Using standard raw string concatenation for the system block to bypass f-string parsing anomalies completely
-                            shot_command = """
-                            You are a Hollywood Director of Photography and Character Concept Artist. Write a comprehensive Shot-by-Shot breakdown for this specific screenplay scene segment:
-                            Title: {scene_title}
-                            Content: {scene_content}
-                            
-                            CRITICAL FORMATTING LAWS:
-                            1. CHARACTER PROFILES SEPARATION: At the very top of your output, before listing any shots, you MUST create a '👥 CHARACTER CONCEPT ART PROFILES' section. Extract all key characters appearing in this scene and create a dedicated, standalone Midjourney reference prompt for each character detailing their unique visual features, facial features, hair style, and specific outfit style matching the context.
-                            2. DURATION RULE: Every single shot MUST explicitly contain an estimated realistic duration timestamp in seconds (e.g., [Duration: 4 Seconds], [Duration: 6 Seconds]) depending on dialogue length and action complexity.
-                            3. CHARACTER LOCK RULE: {character_lock_clause} Every single Image and Video prompt must explicitly start by describing the character exactly as defined.
-                            4. KINETIC ACTION RULE: Video Prompts must show active character motion (e.g., slamming hand on table, pacing anxiously, drawing a weapon) based on the scene's action lines. Avoid static shots.
-                            5. DIALOGUE INJECTION RULE: If a character has a dialogue in this shot, the Video Prompt MUST explicitly include specific speaking facial motion (e.g., 'delivering dramatic dialogue with intense speaking lip sync expression', 'shouting angrily with mouth open delivering dialogue').
-                            6. Language: Narration, Action Description, and Dialogue lines in {story_lang}. Technical prompts in English.
-                            
-                            Structure Your Entire Response Exactly Like This:
-                            👥 CHARACTER CONCEPT ART PROFILES:
-                            * [Character Name]: [Detailed Midjourney visual prompt describing their physical features, clothing, and overall appearance for character reference sheet], Style: {art_mj_style} (Aspect Ratio 1:1)
-                            
-                            --------------------------------------------------
-                            
-                            🎬 SHOT LIST BREAKDOWN:
-                            * SHOT [Scene Number].[Shot Number] - [Duration: X Seconds]
-                            * Camera Shot Type: [e.g. Medium Close Up, Over the Shoulder Shot]
-                            * Action & Dialogue Description: [Detailed Description of what the character is doing and saying]
-                            * 👥 DIALOGUE/NARRATION: [Character Name]: "[Dialogue text]"
-                            * 🎨 Image Prompt (Midjourney): [Character Name Description from profile], [Exact physical action/facial expression in this shot], [Setting], [Framing], [Lighting], Style: {art_mj_style} (Aspect Ratio: {art_ratio})
-                            * 🎥 Video Prompt & Direction (Runway/Luma): [Camera Movement], [Character Name Description + Explicit Kinetic Action or Lip-sync Speaking Expression matching the dialogue], [Dynamic environment], Motion Style: {art_v_style}
-                            """.format(
-                                scene_title=scene['title'],
-                                scene_content=scene['content'],
-                                character_lock_clause=character_lock,
-                                story_lang=story_language,
-                                art_mj_style=mj_style,
-                                art_ratio=image_ratio,
-                                art_v_style=v_style
-                            )
-                            
-                            with st.spinner(f"{scene['title']} အတွက် Multi-Format Prompts များကို ထုတ်လုပ်နေသည်..."):
-                                shot_res = model.generate_content(shot_command)
-                                st.session_state.scene_boards[idx] = shot_res.text
-                        except Exception as e: st.error(f"Error: {str(e)}")
-                
-                with col2:
-                    if idx in st.session_state.scene_boards:
-                        st.text_area("Shot Output", value=st.session_state.scene_boards[idx], height=300, key=f"text_{idx}")
-                        st.download_button(label=f"📥 Download {scene['title']} Board", data=st.session_state.scene_boards[idx], file_name=f"scene_{idx}_board.txt", key=f"dl_{idx}")
-
-st.markdown("</div>", unsafe_allow_html=True)
+                col1, col2 = st.columns(
