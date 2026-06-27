@@ -15,13 +15,11 @@ def get_base64_of_bin_file(bin_file):
         data = f.read()
     return base64.b64encode(data).decode()
 
-# Folder ထဲမှာ bg.jpg ရှိမရှိ စစ်ဆေးပြီး ရှိရင် ဖတ်မယ်၊ မရှိရင် default internet link သုံးမယ်
 image_file = "bg.jpg"
 if os.path.exists(image_file):
     bin_str = get_base64_of_bin_file(image_file)
     bg_img_style = f"background-image: url('data:image/jpeg;base64,{bin_str}');"
 else:
-    # အကယ်၍ bg.jpg ရှာမတွေ့ရင် App Error မတက်အောင် ပုံတူ Link တစ်ခု ပေးထားခြင်း
     bg_img_style = "background-image: url('https://w0.peakpx.com/wallpaper/705/104/HD-wallpaper-anime-girls-playing-games-bed-short-hair-blond.jpg');"
 
 # --- Custom CSS Stylesheet ---
@@ -70,10 +68,6 @@ custom_css = f"""
     }}
     div.stButton > button:hover {{ background: linear-gradient(45deg, #1e40af, #2563eb); transform: translateY(-1px); }}
     
-    div.stButton > button[data-testid="baseButton-secondary"] {{
-        background: linear-gradient(45deg, #7f1d1d, #b91c1c) !important; color: white !important;
-    }}
-    
     [data-testid="stSidebar"] {{ background-color: rgba(15, 23, 42, 0.95) !important; border-right: 1px solid #1e293b; }}
     [data-testid="stSidebar"] .stMarkdown h2 {{ color: #ffbc00 !important; font-weight: bold; }}
     [data-testid="stSidebar"] label {{ color: #f8fafc !important; font-weight: 600 !important; }}
@@ -115,14 +109,6 @@ story_type = st.sidebar.selectbox("Primary Genre", ["Drama", "Horror", "Romance"
 secondary_type = st.sidebar.selectbox("Secondary Genre (Optional Combo)", ["None", "Action", "Drama", "Thriller", "Comedy", "Romance", "Mystery"])
 art_style = st.sidebar.selectbox("Art Style", ["Japan Animation Style (Anime)", "3D Disney Cartoon Style", "Realistic Cinematic Movie", "Cyberpunk Art"])
 image_ratio = st.sidebar.selectbox("Midjourney Ratio", ["16:9", "9:16", "4:3", "1:1"])
-
-st.sidebar.markdown("<hr style='border-color: #1e293b;'/>", unsafe_allow_html=True)
-if st.sidebar.button("🔄 Start Entire New Project", type="secondary"):
-    st.session_state.story_stage = "input"
-    st.session_state.approved_story = ""
-    st.session_state.extracted_scenes = []
-    st.session_state.scene_boards = {}
-    st.rerun()
 
 st.sidebar.markdown("<hr style='border-color: #1e293b;'/>", unsafe_allow_html=True)
 user_api_key = st.sidebar.text_input("Enter Gemini API Key", type="password")
@@ -262,7 +248,7 @@ if st.session_state.story_stage in ["story_ready", "scenes_extracted"]:
                     st.error("Screenplay parsing error. Please try again.")
             except Exception as e: st.error(f"Error: {str(e)}")
 
-    # --- STEP 3: INTERACTIVE SCENE SHOT LIST WITH TIMED PROMPTS ---
+    # --- STEP 3: INTERACTIVE SCENE SHOT LIST WITH SEPARATED CHARACTER PROMPTS ---
     if st.session_state.story_stage == "scenes_extracted":
         st.markdown("<h3 style='color: white;'>🎬 Continuity Production Board</h3>", unsafe_allow_html=True)
         
@@ -290,34 +276,18 @@ if st.session_state.story_stage in ["story_ready", "scenes_extracted"]:
                             character_lock = f"Maintain strict character consistency: {char_profile}." if char_profile else ""
                             
                             shot_command = f"""
-                            You are a Hollywood Director of Photography. Write a comprehensive Shot-by-Shot breakdown for this specific screenplay scene segment:
+                            You are a Hollywood Director of Photography and Character Concept Artist. Write a comprehensive Shot-by-Shot breakdown for this specific screenplay scene segment:
                             Title: {scene['title']}
                             Content: {scene['content']}
                             
-                            CRITICAL LAWS FOR ACTION, DIALOGUE & DURATION PROMPTS:
-                            1. DURATION RULE: Every single shot MUST explicitly contain an estimated realistic duration timestamp in seconds (e.g., [Duration: 4 Seconds], [Duration: 6 Seconds]) depending on dialogue length and action complexity.
-                            2. CHARACTER LOCK RULE: {character_lock} Every single Image and Video prompt must explicitly start by describing the character exactly as defined.
-                            3. KINETIC ACTION RULE: Video Prompts must show active character motion (e.g., slamming hand on table, pacing anxiously, drawing a weapon) based on the scene's action lines. Avoid static shots.
-                            4. DIALOGUE INJECTION RULE: If a character has a dialogue in this shot, the Video Prompt MUST explicitly include specific speaking facial motion (e.g., 'delivering dramatic dialogue with intense speaking lip sync expression', 'shouting angrily with mouth open delivering dialogue').
-                            5. Language: Narration, Action Description, and Dialogue lines in {story_language}. Technical prompts in English.
+                            CRITICAL FORMATTING LAWS:
+                            1. CHARACTER PROFILES SEPARATION: At the very top of your output, before listing any shots, you MUST create a '👥 CHARACTER CONCEPT ART PROFILES' section. Extract all key characters appearing in this scene and create a dedicated, standalone Midjourney reference prompt for each character detailing their unique visual features, facial features, hair style, and specific outfit style matching the context.
+                            2. DURATION RULE: Every single shot MUST explicitly contain an estimated realistic duration timestamp in seconds (e.g., [Duration: 4 Seconds], [Duration: 6 Seconds]) depending on dialogue length and action complexity.
+                            3. CHARACTER LOCK RULE: {character_lock} Every single Image and Video prompt must explicitly start by describing the character exactly as defined.
+                            4. KINETIC ACTION RULE: Video Prompts must show active character motion (e.g., slamming hand on table, pacing anxiously, drawing a weapon) based on the scene's action lines. Avoid static shots.
+                            5. DIALOGUE INJECTION RULE: If a character has a dialogue in this shot, the Video Prompt MUST explicitly include specific speaking facial motion (e.g., 'delivering dramatic dialogue with intense speaking lip sync expression', 'shouting angrily with mouth open delivering dialogue').
+                            6. Language: Narration, Action Description, and Dialogue lines in {story_language}. Technical prompts in English.
                             
-                            Format per Shot:
-                            * SHOT [Scene Number].[Shot Number] - [Duration: X Seconds]
-                            * Camera Shot Type: [e.g. Medium Close Up, Over the Shoulder Shot]
-                            * Action & Dialogue Description: [Detailed Myanmar description of what the character is doing and saying]
-                            * 👥 DIALOGUE/NARRATION: [Character Name]: "[Dialogue text]"
-                            * 🎨 Image Prompt (Midjourney): [Character Description], [Exact physical action/facial expression], [Setting], [Framing], [Lighting], {mj_style} --ar {image_ratio}
-                            * 🎥 Video Prompt & Direction (Runway/Luma): [Camera Movement], [Character Description + Explicit Kinetic Action or Lip-sync Speaking Expression matching the dialogue], [Dynamic environment], {v_style}
-                            """
-                            
-                            with st.spinner(f"{scene['title']} အတွက် Multi-Format Prompts များကို ထုတ်လုပ်နေသည်..."):
-                                shot_res = model.generate_content(shot_command)
-                                st.session_state.scene_boards[idx] = shot_res.text
-                        except Exception as e: st.error(f"Error: {str(e)}")
-                
-                with col2:
-                    if idx in st.session_state.scene_boards:
-                        st.text_area("Shot Output", value=st.session_state.scene_boards[idx], height=250, key=f"text_{idx}")
-                        st.download_button(label=f"📥 Download {scene['title']} Board", data=st.session_state.scene_boards[idx], file_name=f"scene_{idx}_board.txt", key=f"dl_{idx}")
-
-st.markdown("</div>", unsafe_allow_html=True)
+                            Structure Your Entire Response Exactly Like This:
+                            👥 CHARACTER CONCEPT ART PROFILES:
+                            * [Character Name]:
