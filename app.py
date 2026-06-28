@@ -46,7 +46,7 @@ story_language = st.sidebar.radio("Output Language", ["Myanmar", "English"])
 col_min, col_sec = st.sidebar.columns(2)
 duration_min = col_min.number_input("Minutes", min_value=0, max_value=40, value=1)
 duration_sec = col_sec.number_input("Seconds", min_value=0, max_value=59, value=0)
-char_profile = st.sidebar.text_area("Character Profile", height=100)
+
 story_type = st.sidebar.selectbox("Genre 1", ["Drama", "Horror", "Romance", "Fantasy", "Sci-Fi", "Comedy", "Action"])
 secondary_type = st.sidebar.selectbox("Genre 2", ["None", "Action", "Drama", "Thriller", "Comedy", "Romance", "Mystery"])
 art_style = st.sidebar.selectbox("Style", ["Japan Animation Style (Anime)", "3D Disney Cartoon Style", "Realistic Cinematic Movie", "Cyberpunk Art"])
@@ -98,9 +98,8 @@ if st.session_state.story_stage == "input":
                         """
                         response = model.generate_content(story_command)
                         
-                        # --- 🛡️ STEP 1 RECITATION GUARD ---
                         if response.candidates and response.candidates[0].finish_reason.name in ["RECITATION", "8"]:
-                            st.error(f"⚠️ Loop {attempt}: Gemini Safety Blocked (Reason: RECITATION). ဇာတ်လမ်းစာသားတွေက အပြင်ကစာတွေနဲ့ သွားတူလို့ ရပ်သွားတာပါ။ Story Concept ကို နည်းနည်းပြောင်းပေးပါ။")
+                            st.error(f"⚠️ Loop {attempt}: Gemini Safety Blocked. ကျော်လိုက်ပါတယ်။")
                             continue
                             
                         if response and response.text:
@@ -114,8 +113,7 @@ if st.session_state.story_stage == "input":
                     time.sleep(1)
                 
                 status_box.empty()
-                if passed_gate:
-                    st.rerun()
+                if passed_gate: st.rerun()
             except Exception as e: st.error(f"Error: {str(e)}")
 
 if st.session_state.story_stage in ["story_ready", "scenes_extracted"]:
@@ -163,6 +161,8 @@ if st.session_state.story_stage in ["story_ready", "scenes_extracted"]:
             v_style = "Cinematic Movie Style, Photorealistic, Masterpiece Motion"
 
         for idx, scene in enumerate(st.session_state.extracted_scenes):
+            is_scene_one = (idx == 0) # Scene 1 ဟုတ်မဟုတ် စစ်ဆေးခြင်း
+            
             with st.container():
                 st.markdown(f"<div class='scene-box'><h4>📌 {scene['title']}</h4><p>{scene['content']}</p></div>", unsafe_allow_html=True)
                 col1, col2 = st.columns([1, 4])
@@ -172,48 +172,67 @@ if st.session_state.story_stage in ["story_ready", "scenes_extracted"]:
                             genai.configure(api_key=user_api_key)
                             model = genai.GenerativeModel('gemini-2.5-flash')
                             
-                            character_lock = f"Maintain strict character consistency: {char_profile}." if char_profile else "Ensure unified style consistency."
-                            
+                            # Scene 1 အတွက်ပဲ Character Sheet Block Law ညွှန်ကြားချက် သီးသန့်ထုတ်ခိုင်းခြင်း
+                            if is_scene_one:
+                                char_sheet_instruction = """
+                                ⚠️ CRITICAL MANDATORY LAW (ONLY FOR SCENE 1):
+                                At the very top of your output, you MUST generate a dedicated '👥 CHARACTER MODEL SHEET PROFILES' block. 
+                                For every key character in this screenplay, generate a detailed Midjourney Model Sheet Prompt containing:
+                                - Age, Exact Height/Physique, Skin Tone, and specific Outfits.
+                                - Explicit multiple turnaround expressions and angles: 'character sheet, multiple turnaround poses, front view, back view, side view, multiple facial expressions and emotional impressions'.
+                                - Render Style: {art_mj_style} --ar 1:1
+                                """
+                                structure_format = """
+                                👥 CHARACTER MODEL SHEET PROFILES:
+                                * [Character Name]: [Age, Height, Skin Tone, Detailed Clothing], character sheet, multiple turnaround poses, front view, back view, side view, multiple facial expressions, Style: {art_mj_style} --ar 1:1
+                                
+                                --------------------------------------------------
+                                """
+                            else:
+                                char_sheet_instruction = "Do NOT generate any Character Profiles or Model Sheets here. Start directly with the Shot List Breakdown."
+                                structure_format = ""
+
                             shot_command = """
-                            You are a Hollywood Director of Photography, Character Concept Artist, and Sound Designer. Write a comprehensive Shot-by-Shot breakdown for this segment:
+                            You are an expert Hollywood Cinematographer, Prompter, and Sound Director. Take this scene segment and generate a meticulous sequential Shot-by-Shot list:
                             Content: {scene_content}
                             
-                            ANTI-RECITATION LAW: Do NOT repeat long string chunks or verbatim expressions that mimic copyrighted materials. Paraphrase and describe scene context dynamically.
+                            {char_sheet_clause}
                             
-                            CRITICAL LAWS:
-                            1. 👥 CHARACTER CONCEPT ART PROFILES: Create a dedicated section at the very top. Extract all key characters and write dedicated Midjourney prompt templates for each based on {char_profile_clause}. Style: {art_mj_style} (Aspect Ratio 1:1)
-                            2. 🎵 SOUND STYLE & SFX/Solfeggio: Every single shot MUST contain character voice tone delivery rules and specific prompt parameters tailored for Suno/Udio generation.
-                            3. Technical descriptions must be in English. Screenplay translations in {story_lang}.
+                            ⚠️ MANDATORY OUTPUT VERIFICATION RULES:
+                            - Verify that every Image Prompt literally starts with the camera shot type (e.g. Extreme Wide Shot, Medium Shot, Close Up Shot).
+                            - Verify that every Video Prompt contains both camera animation movement keywords and the specific kinetic motion of the characters.
+                            - Ensure the exact structural order requested below is followed strictly.
                             
                             Structure Your Entire Response Exactly Like This:
-                            👥 CHARACTER CONCEPT ART PROFILES:
-                            * [Character Name]: [Detailed Midjourney visual prompt describing appearance], Style: {art_mj_style} (Aspect Ratio 1:1)
+                            {structure_clause}
+                            
+                            🎬 SHOT [Scene Number].[Shot Number] - [Duration: X Seconds]
+                            
+                            🎨 Image Prompt (Midjourney): [MUST start with the Camera Framing/Angle keyword, e.g., 'An extreme wide shot establishing shot of...', 'A close up shot of...']. Describe the environment and character states clearly following style: {art_mj_style} --ar {art_ratio}
+                            
+                            👥 DIALOGUE / NARRATION: [Character Name or N/A]: "[Script line or narration text translated to {story_lang}]"
+                            
+                            🎥 Video Prompt & Direction (Runway/Luma): [Combine Camera Movement like Pan/Zoom/Tilt with the characters' physical action actions], Motion Style: {art_v_style}
+                            
+                            🎵 Sound Style & SFX/Solfeggio: [Character voice delivery parameters] + [Audio atmosphere background music parameters for Suno/Udio]
                             
                             --------------------------------------------------
-                            
-                            🎬 SHOT LIST BREAKDOWN:
-                            * SHOT [Scene Number].[Shot Number] - [Duration: X Seconds]
-                            * Camera Shot Type: [e.g. Medium Close Up, Wide Shot]
-                            * Action & Dialogue Description: [Detailed Action]
-                            * 👥 DIALOGUE/NARRATION: [Character]: "[Text]"
-                            * 🎨 Image Prompt (Midjourney): [Description], Style: {art_mj_style} (Aspect Ratio: {art_ratio})
-                            * 🎥 Video Prompt & Direction (Runway/Luma): [Camera Motion, Character Kinetic Actions], Motion Style: {art_v_style}
-                            * 🎵 Sound Style & SFX/Solfeggio: [Voice tone parameters] + [Audio atmosphere prompt for background score]
                             """.format(
                                 scene_content=scene['content'],
-                                char_profile_clause=character_lock,
+                                char_profile_clause="",
+                                char_sheet_clause=char_sheet_instruction,
+                                structure_clause=structure_format,
                                 story_lang=story_language,
                                 art_mj_style=mj_style,
                                 art_ratio=image_ratio,
                                 art_v_style=v_style
                             )
                             
-                            with st.spinner(f"{scene['title']} အတွက် Features အစုံအလင်ဖြင့် Prompts များ ထုတ်လုပ်နေသည်..."):
+                            with st.spinner(f"{scene['title']} အတွက် အထူးပြင်ဆင်ထားသော Prompts များ ထုတ်လုပ်နေသည်..."):
                                 response = model.generate_content(shot_command)
                                 
-                                # --- 🛡️ STEP 2 SHOT GENERATION RECITATION GUARD ---
                                 if response.candidates and response.candidates[0].finish_reason.name in ["RECITATION", "8"]:
-                                    st.error("⚠️ Gemini Safety Blocked (Reason: RECITATION) ဖြစ်သွားပြန်ပါတယ်။ Shot ထဲက စာသားအချို့က မူပိုင်ခွင့်စနစ်နဲ့ ငြိသွားလို့ပါ။ ကျေးဇူးပြု၍ '🎬 Generate Shots' ခလုတ်ကို နောက်တစ်ကြိမ် ပြန်နှိပ်ပေးပါဗျာ။")
+                                    st.error("⚠️ Gemini Safety Blocked ဖြစ်သွားပြန်ပါတယ်။ '🎬 Generate Shots' ကို နောက်တစ်ကြိမ် ပြန်နှိပ်ပေးပါဗျာ။")
                                 elif response and response.text:
                                     st.session_state.scene_boards[idx] = response.text.strip()
                                     st.rerun()
@@ -221,7 +240,7 @@ if st.session_state.story_stage in ["story_ready", "scenes_extracted"]:
                 
                 with col2:
                     if idx in st.session_state.scene_boards:
-                        st.text_area("Shot Output", value=st.session_state.scene_boards[idx], height=250, key=f"text_{idx}")
+                        st.text_area("Shot Output", value=st.session_state.scene_boards[idx], height=300, key=f"text_{idx}")
                         st.download_button(
                             label=f"📥 Download {scene['title']} Board", 
                             data=st.session_state.scene_boards[idx], 
