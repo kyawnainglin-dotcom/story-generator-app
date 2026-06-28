@@ -161,7 +161,7 @@ if st.session_state.story_stage in ["story_ready", "scenes_extracted"]:
             v_style = "Cinematic Movie Style, Photorealistic, Masterpiece Motion"
 
         for idx, scene in enumerate(st.session_state.extracted_scenes):
-            is_scene_one = (idx == 0) # Scene 1 ဟုတ်မဟုတ် စစ်ဆေးခြင်း
+            is_scene_one = (idx == 0)
             
             with st.container():
                 st.markdown(f"<div class='scene-box'><h4>📌 {scene['title']}</h4><p>{scene['content']}</p></div>", unsafe_allow_html=True)
@@ -172,19 +172,18 @@ if st.session_state.story_stage in ["story_ready", "scenes_extracted"]:
                             genai.configure(api_key=user_api_key)
                             model = genai.GenerativeModel('gemini-2.5-flash')
                             
-                            # Scene 1 အတွက်ပဲ Character Sheet Block Law ညွှန်ကြားချက် သီးသန့်ထုတ်ခိုင်းခြင်း
                             if is_scene_one:
-                                char_sheet_instruction = """
+                                char_sheet_instruction = f"""
                                 ⚠️ CRITICAL MANDATORY LAW (ONLY FOR SCENE 1):
                                 At the very top of your output, you MUST generate a dedicated '👥 CHARACTER MODEL SHEET PROFILES' block. 
                                 For every key character in this screenplay, generate a detailed Midjourney Model Sheet Prompt containing:
                                 - Age, Exact Height/Physique, Skin Tone, and specific Outfits.
                                 - Explicit multiple turnaround expressions and angles: 'character sheet, multiple turnaround poses, front view, back view, side view, multiple facial expressions and emotional impressions'.
-                                - Render Style: {art_mj_style} --ar 1:1
+                                - Render Style: {mj_style} --ar 1:1
                                 """
-                                structure_format = """
+                                structure_format = f"""
                                 👥 CHARACTER MODEL SHEET PROFILES:
-                                * [Character Name]: [Age, Height, Skin Tone, Detailed Clothing], character sheet, multiple turnaround poses, front view, back view, side view, multiple facial expressions, Style: {art_mj_style} --ar 1:1
+                                * [Character Name]: [Age, Height, Skin Tone, Detailed Clothing], character sheet, multiple turnaround poses, front view, back view, side view, multiple facial expressions, Style: {mj_style} --ar 1:1
                                 
                                 --------------------------------------------------
                                 """
@@ -198,6 +197,12 @@ if st.session_state.story_stage in ["story_ready", "scenes_extracted"]:
                             
                             {char_sheet_clause}
                             
+                            ⚠️ CINEMATIC PACING & EDITING RULES (CRITICAL):
+                            - For Dialogue & Conversation: DO NOT make a single shot last the entire dialogue. Split long dialogues into multiple rhythmic shots (Cut every 3 seconds). Rotate camera angles! Use combinations of: Medium Shot (MS), Close-Up (CU), Over-the-Shoulder (OTS), and Reaction Shots of the listener.
+                            - Shot Duration Limits: 
+                               * Dialogue/Action Shots: Strictly 3 to 4 seconds per shot.
+                               * Scenery/Establishing Shots: 7 to 10 seconds to show the atmosphere.
+                            
                             ⚠️ MANDATORY OUTPUT VERIFICATION RULES:
                             - Verify that every Image Prompt literally starts with the camera shot type (e.g. Extreme Wide Shot, Medium Shot, Close Up Shot).
                             - Verify that every Video Prompt contains both camera animation movement keywords and the specific kinetic motion of the characters.
@@ -206,20 +211,19 @@ if st.session_state.story_stage in ["story_ready", "scenes_extracted"]:
                             Structure Your Entire Response Exactly Like This:
                             {structure_clause}
                             
-                            🎬 SHOT [Scene Number].[Shot Number] - [Duration: X Seconds]
+                            🎬 SHOT [Scene Number].[Shot Number] - [Duration: X Seconds] (Note: Keep it 3-4s for dialogue/action, 7-10s for scenery)
                             
-                            🎨 Image Prompt (Midjourney): [MUST start with the Camera Framing/Angle keyword, e.g., 'An extreme wide shot establishing shot of...', 'A close up shot of...']. Describe the environment and character states clearly following style: {art_mj_style} --ar {art_ratio}
+                            🎨 Image Prompt (Midjourney): [MUST start with Camera Framing/Angle, e.g., 'A dramatic medium close-up shot of...']. Describe the character's facial expression, exact clothing, environmental background details, cinematic lighting (e.g., cinematic lighting, volumetric dust, moody atmosphere, depth of field), shot captured on 35mm lens, photorealistic masterwork, followed strictly by style: {art_mj_style} --ar {art_ratio}
                             
                             👥 DIALOGUE / NARRATION: [Character Name or N/A]: "[Script line or narration text translated to {story_lang}]"
                             
-                            🎥 Video Prompt & Direction (Runway/Luma): [Combine Camera Movement like Pan/Zoom/Tilt with the characters' physical action actions], Motion Style: {art_v_style}
+                            🎥 Video Prompt & Direction (Runway/Luma): [Describe the precise cinematic motion]. Combine exact camera movement speed (e.g., 'Slow cinematic pan right', 'Subtle push in', 'Fast crane down') with the character's physical micro-expressions and body language. Add physics motion details (e.g., 'natural hair movement, clothes swaying in the wind, photorealistic cinematic physics, seamless high-quality motion'), Motion Style: {art_v_style}
                             
                             🎵 Sound Style & SFX/Solfeggio: [Character voice delivery parameters] + [Audio atmosphere background music parameters for Suno/Udio]
                             
                             --------------------------------------------------
                             """.format(
                                 scene_content=scene['content'],
-                                char_profile_clause="",
                                 char_sheet_clause=char_sheet_instruction,
                                 structure_clause=structure_format,
                                 story_lang=story_language,
