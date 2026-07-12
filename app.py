@@ -1,12 +1,12 @@
 import streamlit as st
-import google.generativeai as genai
+import openai  # OpenRouter သည် OpenAI client ကို သုံးရပါသည်
 import random
 import time
 import re
 import base64
 import os
 
-st.set_page_config(page_title="AI Director Master Shot-List Studio", layout="wide")
+st.set_page_config(page_title="AI Director Master Shot-List Studio (FREE)", layout="wide")
 
 def get_base64_of_bin_file(bin_file):
     with open(bin_file, 'rb') as f:
@@ -51,27 +51,33 @@ story_type = st.sidebar.selectbox("Genre 1", ["Drama", "Horror", "Romance", "Fan
 secondary_type = st.sidebar.selectbox("Genre 2", ["None", "Action", "Drama", "Thriller", "Comedy", "Romance", "Mystery"])
 art_style = st.sidebar.selectbox("Style", ["Japan Animation Style (Anime)", "3D Disney Cartoon Style", "Realistic Cinematic Movie", "Cyberpunk Art"])
 image_ratio = st.sidebar.selectbox("Ratio", ["16:9", "9:16", "4:3", "1:1"])
-user_api_key = st.sidebar.text_input("Gemini API Key", type="password")
+
+# OpenRouter API Key ထည့်ရန်
+user_api_key = st.sidebar.text_input("OpenRouter API Key (FREE)", type="password", help="openrouter.ai မှာ အလကား လျှောက်လို့ရပါတယ်")
+
+# Free Model ကို ရွေးချယ်ခိုင်းခြင်း (Llama 3 သို့မဟုတ် Gemini Flash Free)
+free_model = "meta-llama/llama-3-8b-instruct:free"
 
 st.markdown("<div class='main-content'>", unsafe_allow_html=True)
-st.title("Director's Master Script & Shot Board")
+st.title("Director's Master Script & Shot Board (Free Version)")
+
+# OpenRouter Client ဆောက်သည့် Function
+def get_openrouter_client(api_key):
+    return openai.OpenAI(
+        base_url="https://openrouter.ai/api/v1",
+        api_key=api_key
+    )
 
 if st.session_state.story_stage == "input":
     story_concept = st.text_input("Story Concept", placeholder="ဇတ်လမ်းအကျဉ်း")
     total_target_seconds = (duration_min * 60) + duration_sec
     
     if st.button("Step 1: Brainstorm Master Screenplay"):
-        if not user_api_key: st.error("API Key လိုအပ်ပါသည်။")
+        if not user_api_key: st.error("OpenRouter API Key လိုအပ်ပါသည်။ (openrouter.ai တွင် အခမဲ့ရယူပါ)")
         elif total_target_seconds == 0: st.error("ကျေးဇူးပြု၍ အချိန်သတ်မှတ်ပေးပါ။")
         else:
             try:
-                genai.configure(api_key=user_api_key)
-                model = genai.GenerativeModel('gemini-2.5-flash')
-                
-                max_attempts = 5
-                attempt = 0
-                passed_gate = False
-                status_box = st.empty()
+                client = get_openrouter_client(user_api_key)
                 combo_genre = story_type if secondary_type == "None" else f"{story_type} + {secondary_type}"
                 
                 if total_target_seconds <= 60:
@@ -81,39 +87,30 @@ if st.session_state.story_stage == "input":
                 else:
                     length_instruction = "EPIC MULTI-ACT SCRIPT. Detailed multi-scene timeline (5+ scenes)."
 
-                while attempt < max_attempts and not passed_gate:
-                    attempt += 1
-                    status_box.markdown(f"🔄 **Screenplay Generation: Loop {attempt}/{max_attempts}...**")
+                with st.spinner("🔄 Free AI မှ Master Screenplay ကို ဖန်တီးပေးနေပါသည်..."):
+                    story_command = f"""
+                    Write a 100% highly original, creative fictional movie screenplay based loosely on: '{story_concept}'. 
+                    Do NOT copy any existing copyrighted dialogues, real movies, or books. Make it unique.
+                    Genre: {combo_genre}. Language: Write in {story_language}.
+                    Scale Constraint: {length_instruction}
                     
-                    try:
-                        story_command = f"""
-                        Write a 100% highly original, creative fictional movie screenplay based loosely on: '{story_concept}'. 
-                        Do NOT copy any existing copyrighted dialogues, real movies, or books. Make it unique.
-                        Genre: {combo_genre}. Language: Write in {story_language}.
-                        Scale Constraint: {length_instruction}
-                        
-                        Format:
-                        📌 SCRIPT TITLE: [Title]
-                        📖 FULL SCREENPLAY: [Write scene headings and character dialogues]
-                        """
-                        response = model.generate_content(story_command)
-                        
-                        if response.candidates and response.candidates[0].finish_reason.name in ["RECITATION", "8"]:
-                            st.error(f"⚠️ Loop {attempt}: Gemini Safety Blocked. ကျော်လိုက်ပါတယ်။")
-                            continue
-                            
-                        if response and response.text:
-                            passed_gate = True
-                            st.session_state.approved_story = response.text.strip()
-                            st.session_state.story_analysis = {"genre": combo_genre}
-                            st.session_state.story_stage = "story_ready"
-                            break
-                    except Exception as loop_err:
-                        st.error(f"⚠️ Loop {attempt} Error: {str(loop_err)}")
-                    time.sleep(1)
-                
-                status_box.empty()
-                if passed_gate: st.rerun()
+                    Format:
+                    📌 SCRIPT TITLE: [Title]
+                    📖 FULL SCREENPLAY: [Write scene headings and character dialogues]
+                    """
+                    
+                    response = client.chat.completions.create(
+                        model=free_model,
+                        messages=[{"role": "user", "content": story_command}]
+                    )
+                    
+                    ai_text = response.choices[0].message.content
+                    
+                    if ai_text:
+                        st.session_state.approved_story = ai_text.strip()
+                        st.session_state.story_analysis = {"genre": combo_genre}
+                        st.session_state.story_stage = "story_ready"
+                        st.rerun()
             except Exception as e: st.error(f"Error: {str(e)}")
 
 if st.session_state.story_stage in ["story_ready", "scenes_extracted"]:
@@ -130,11 +127,16 @@ if st.session_state.story_stage in ["story_ready", "scenes_extracted"]:
     if st.session_state.story_stage == "story_ready":
         if st.button("Separate Screenplay Into Scene Chunks"):
             try:
-                genai.configure(api_key=user_api_key)
-                model = genai.GenerativeModel('gemini-2.5-flash')
+                client = get_openrouter_client(user_api_key)
                 chunk_command = f"Break this script into logical individual scenes using format SCENE_BLOCK_START Scene X: Description Content: Text SCENE_BLOCK_END. Script: {st.session_state.approved_story}"
-                res = model.generate_content(chunk_command)
-                raw_scenes = re.findall(r"SCENE_BLOCK_START(.*?)SCENE_BLOCK_END", res.text, flags=re.DOTALL)
+                
+                res = client.chat.completions.create(
+                    model=free_model,
+                    messages=[{"role": "user", "content": chunk_command}]
+                )
+                
+                raw_text = res.choices[0].message.content
+                raw_scenes = re.findall(r"SCENE_BLOCK_START(.*?)SCENE_BLOCK_END", raw_text, flags=re.DOTALL)
                 
                 scenes_list = []
                 for s in raw_scenes:
@@ -169,8 +171,7 @@ if st.session_state.story_stage in ["story_ready", "scenes_extracted"]:
                 with col1:
                     if st.button(f"🎬 Generate Shots", key=f"gen_{idx}"):
                         try:
-                            genai.configure(api_key=user_api_key)
-                            model = genai.GenerativeModel('gemini-2.5-flash')
+                            client = get_openrouter_client(user_api_key)
                             
                             if is_scene_one:
                                 char_sheet_instruction = f"""
@@ -233,12 +234,14 @@ if st.session_state.story_stage in ["story_ready", "scenes_extracted"]:
                             )
                             
                             with st.spinner(f"{scene['title']} အတွက် အထူးပြင်ဆင်ထားသော Prompts များ ထုတ်လုပ်နေသည်..."):
-                                response = model.generate_content(shot_command)
+                                res_shot = client.chat.completions.create(
+                                    model=free_model,
+                                    messages=[{"role": "user", "content": shot_command}]
+                                )
+                                shot_text = res_shot.choices[0].message.content
                                 
-                                if response.candidates and response.candidates[0].finish_reason.name in ["RECITATION", "8"]:
-                                    st.error("⚠️ Gemini Safety Blocked ဖြစ်သွားပြန်ပါတယ်။ '🎬 Generate Shots' ကို နောက်တစ်ကြိမ် ပြန်နှိပ်ပေးပါဗျာ။")
-                                elif response and response.text:
-                                    st.session_state.scene_boards[idx] = response.text.strip()
+                                if shot_text:
+                                    st.session_state.scene_boards[idx] = shot_text.strip()
                                     st.rerun()
                         except Exception as e: st.error(f"API Error: {str(e)}")
                 
