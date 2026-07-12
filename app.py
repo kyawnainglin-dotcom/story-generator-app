@@ -56,7 +56,7 @@ image_ratio = st.sidebar.selectbox("Ratio", ["16:9", "9:16", "4:3", "1:1"])
 user_api_key = st.sidebar.text_input("OpenRouter API Key (FREE)", type="password", help="openrouter.ai မှာ အလကား လျှောက်လို့ရပါတယ်")
 
 # Free Model ကို ရွေးချယ်ခိုင်းခြင်း (Llama 3 သို့မဟုတ် Gemini Flash Free)
-free_model = "openai/gpt-4o-mini:free"
+free_model = "meta-llama/llama-3.3-70b-instruct:free"
 
 st.markdown("<div class='main-content'>", unsafe_allow_html=True)
 st.title("Director's Master Script & Shot Board (Free Version)")
