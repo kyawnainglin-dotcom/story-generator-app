@@ -147,3 +147,122 @@ if st.session_state.story_stage in ["story_ready", "scenes_extracted"]:
                 
                 raw_text = res.choices[0].message.content
                 raw_scenes = re.findall(r"SCENE_BLOCK_START(.*?)SCENE_BLOCK_END", raw_text, flags=re.DOTALL)
+                
+                scenes_list = []
+                for s in raw_scenes:
+                    title_match = re.search(r"Scene \d+:.*", s)
+                    content_match = re.search(r"Content:\s*(.*)", s, flags=re.DOTALL)
+                    if title_match and content_match:
+                        scenes_list.append({"title": title_match.group(0).strip(), "content": content_match.group(1).strip()})
+                
+                if scenes_list:
+                    st.session_state.extracted_scenes = scenes_list
+                    st.session_state.story_stage = "scenes_extracted"
+                    st.rerun()
+            except Exception as e: st.error(f"Error: {str(e)}")
+
+    if st.session_state.story_stage == "scenes_extracted":
+        if "Disney" in art_style:
+            mj_style = "3D Pixar Disney Animation Style, Vibrant Clay Render, Raytracing"
+            v_style = "Disney Pixar Animation Style, Smooth Motion"
+        elif "Anime" in art_style:
+            mj_style = "Anime Key Visual, Sharp Lineart, Vibrant Colors, --niji 6"
+            v_style = "Anime Motion, Fluent 2D Animation"
+        else:
+            mj_style = "Cinematic Still, Film Grain, 8k Resolution, Photorealistic, --style raw --v 6.0"
+            v_style = "Cinematic Movie Style, Photorealistic, Masterpiece Motion"
+
+        for idx, scene in enumerate(st.session_state.extracted_scenes):
+            is_scene_one = (idx == 0)
+            
+            with st.container():
+                st.markdown(f"<div class='scene-box'><h4>📌 {scene['title']}</h4><p>{scene['content']}</p></div>", unsafe_allow_html=True)
+                col1, col2 = st.columns([1, 4])
+                with col1:
+                    if st.button(f"🎬 Generate Shots", key=f"gen_{idx}"):
+                        try:
+                            client = get_openrouter_client(user_api_key)
+                            
+                            if is_scene_one:
+                                char_sheet_instruction = f"""
+                                ⚠️ CRITICAL MANDATORY LAW (ONLY FOR SCENE 1):
+                                At the very top of your output, you MUST generate a dedicated '👥 CHARACTER MODEL SHEET PROFILES' block. 
+                                For every key character in this screenplay, generate a detailed Midjourney Model Sheet Prompt containing:
+                                - Age, Exact Height/Physique, Skin Tone, and specific Outfits.
+                                - Explicit multiple turnaround expressions and angles: 'character sheet, multiple turnaround poses, front view, back view, side view, multiple facial expressions and emotional impressions'.
+                                - Render Style: {mj_style} --ar 1:1
+                                """
+                                structure_format = f"""
+                                👥 CHARACTER MODEL SHEET PROFILES:
+                                * [Character Name]: [Age, Height, Skin Tone, Detailed Clothing], character sheet, multiple turnaround poses, front view, back view, side view, multiple facial expressions, Style: {mj_style} --ar 1:1
+                                
+                                --------------------------------------------------
+                                """
+                            else:
+                                char_sheet_instruction = "Do NOT generate any Character Profiles or Model Sheets here. Start directly with the Shot List Breakdown."
+                                structure_format = ""
+
+                            shot_command = """
+                            You are an expert Hollywood Cinematographer, Prompter, and Sound Director. Take this scene segment and generate a meticulous sequential Shot-by-Shot list:
+                            Content: {scene_content}
+                            
+                            {char_sheet_clause}
+                            
+                            ⚠️ CINEMATIC PACING & EDITING RULES (CRITICAL):
+                            - For Dialogue & Conversation: DO NOT make a single shot last the entire dialogue. Split long dialogues into multiple rhythmic shots (Cut every 3 seconds). Rotate camera angles! Use combinations of: Medium Shot (MS), Close-Up (CU), Over-the-Shoulder (OTS), and Reaction Shots of the listener.
+                            - Shot Duration Limits: 
+                               * Dialogue/Action Shots: Strictly 3 to 4 seconds per shot.
+                               * Scenery/Establishing Shots: 7 to 10 seconds to show the atmosphere.
+                            
+                            ⚠️ MANDATORY OUTPUT VERIFICATION RULES:
+                            - Verify that every Image Prompt literally starts with the camera shot type (e.g. Extreme Wide Shot, Medium Shot, Close Up Shot).
+                            - Verify that every Video Prompt contains both camera animation movement keywords and the specific kinetic motion of the characters.
+                            - Ensure the exact structural order requested below is followed strictly.
+                            
+                            Structure Your Entire Response Exactly Like This:
+                            {structure_clause}
+                            
+                            🎬 SHOT [Scene Number].[Shot Number] - [Duration: X Seconds] (Note: Keep it 3-4s for dialogue/action, 7-10s for scenery)
+                            
+                            🎨 Image Prompt (Midjourney): [MUST start with Camera Framing/Angle, e.g., 'A dramatic medium close-up shot of...']. Describe the character's facial expression, exact clothing, environmental background details, cinematic lighting (e.g., cinematic lighting, volumetric dust, moody atmosphere, depth of field), shot captured on 35mm lens, photorealistic masterwork, followed strictly by style: {art_mj_style} --ar {art_ratio}
+                            
+                            👥 DIALOGUE / NARRATION: [Character Name or N/A]: "[Script line or narration text translated to {story_lang}]"
+                            
+                            🎥 Video Prompt & Direction (Runway/Luma): [Describe the precise cinematic motion]. Combine exact camera movement speed (e.g., 'Slow cinematic pan right', 'Subtle push in', 'Fast crane down') with the character's physical micro-expressions and body language. Add physics motion details (e.g., 'natural hair movement, clothes swaying in the wind, photorealistic cinematic physics, seamless high-quality motion'), Motion Style: {art_v_style}
+                            
+                            🎵 Sound Style & SFX/Solfeggio: [Character voice delivery parameters] + [Audio atmosphere background music parameters for Suno/Udio]
+                            
+                            --------------------------------------------------
+                            """.format(
+                                scene_content=scene['content'],
+                                char_sheet_clause=char_sheet_instruction,
+                                structure_clause=structure_format,
+                                story_lang=story_language,
+                                art_mj_style=mj_style,
+                                art_ratio=image_ratio,
+                                art_v_style=v_style
+                            )
+                            
+                            with st.spinner(f"{scene['title']} အတွက် အထူးပြင်ဆင်ထားသော Prompts များ ထုတ်လုပ်နေသည်..."):
+                                res_shot = client.chat.completions.create(
+                                    model=free_model,
+                                    messages=[{"role": "user", "content": shot_command}]
+                                )
+                                shot_text = res_shot.choices[0].message.content
+                                
+                                if shot_text:
+                                    st.session_state.scene_boards[idx] = shot_text.strip()
+                                    st.rerun()
+                        except Exception as e: st.error(f"API Error: {str(e)}")
+                
+                with col2:
+                    if idx in st.session_state.scene_boards:
+                        st.text_area("Shot Output", value=st.session_state.scene_boards[idx], height=300, key=f"text_{idx}")
+                        st.download_button(
+                            label=f"📥 Download {scene['title']} Board", 
+                            data=st.session_state.scene_boards[idx], 
+                            file_name=f"scene_{idx}_master_board.txt", 
+                            key=f"dl_{idx}"
+                        )
+
+st.markdown("</div>", unsafe_allow_html=True)
