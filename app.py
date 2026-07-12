@@ -56,7 +56,7 @@ image_ratio = st.sidebar.selectbox("Ratio", ["16:9", "9:16", "4:3", "1:1"])
 user_api_key = st.sidebar.text_input("OpenRouter API Key (FREE)", type="password", help="openrouter.ai မှာ အလကား လျှောက်လို့ရပါတယ်")
 
 # Free Model ကို ရွေးချယ်ခိုင်းခြင်း (Llama 3 သို့မဟုတ် Gemini Flash Free)
-free_model = "# Free Model တွေထဲမှာ Claude AI ကိုပါ တစ်ခါတည်း include လုပ်ပေးလိုက်ပါတယ်
+free_model = "# Free Model ရွေးချယ်ရန် Selectbox
 model_choice = st.sidebar.selectbox(
     "Choose Free AI Model", 
     ["Claude 3 Haiku (Highly Creative)", "Gemini 2.5 Flash (Recommended)", "Llama 3.3 70B"]
