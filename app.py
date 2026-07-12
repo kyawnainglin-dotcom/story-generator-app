@@ -56,7 +56,18 @@ image_ratio = st.sidebar.selectbox("Ratio", ["16:9", "9:16", "4:3", "1:1"])
 user_api_key = st.sidebar.text_input("OpenRouter API Key (FREE)", type="password", help="openrouter.ai မှာ အလကား လျှောက်လို့ရပါတယ်")
 
 # Free Model ကို ရွေးချယ်ခိုင်းခြင်း (Llama 3 သို့မဟုတ် Gemini Flash Free)
-free_model = "meta-llama/llama-3.3-70b-instruct:free"
+free_model = "# Free Model တွေထဲမှာ Claude AI ကိုပါ တစ်ခါတည်း include လုပ်ပေးလိုက်ပါတယ်
+model_choice = st.sidebar.selectbox(
+    "Choose Free AI Model", 
+    ["Claude 3 Haiku (Highly Creative)", "Gemini 2.5 Flash (Recommended)", "Llama 3.3 70B"]
+)
+
+if model_choice == "Claude 3 Haiku (Highly Creative)":
+    free_model = "anthropic/claude-3-haiku:free"
+elif model_choice == "Gemini 2.5 Flash (Recommended)":
+    free_model = "google/gemini-2.5-flash:free"
+else:
+    free_model = "meta-llama/llama-3.3-70b-instruct:free""
 
 st.markdown("<div class='main-content'>", unsafe_allow_html=True)
 st.title("Director's Master Script & Shot Board (Free Version)")
