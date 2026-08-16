@@ -35,6 +35,21 @@ custom_css = f"""
 """
 st.markdown(custom_css, unsafe_allow_html=True)
 
+# Function to get available model seamlessly
+def get_working_model(api_key):
+    genai.configure(api_key=api_key.strip())
+    # Available model options priority list
+    model_candidates = ['gemini-1.5-flash-latest', 'gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-pro']
+    
+    for model_name in model_candidates:
+        try:
+            model = genai.GenerativeModel(model_name)
+            return model, model_name
+        except Exception:
+            continue
+    # Default fallback
+    return genai.GenerativeModel('gemini-1.5-flash-latest'), 'gemini-1.5-flash-latest'
+
 if "story_stage" not in st.session_state: st.session_state.story_stage = "input"
 if "approved_story" not in st.session_state: st.session_state.approved_story = ""
 if "story_analysis" not in st.session_state: st.session_state.story_analysis = {}
@@ -65,9 +80,7 @@ if st.session_state.story_stage == "input":
         elif total_target_seconds == 0: st.error("ကျေးဇူးပြု၍ အချိန်သတ်မှတ်ပေးပါ။")
         else:
             try:
-                genai.configure(api_key=user_api_key.strip())
-                # Model Name ကို gemini-1.5-flash သို့ ပြောင်းလဲထားပါသည်
-                model = genai.GenerativeModel('gemini-1.5-flash')
+                model, model_used = get_working_model(user_api_key)
                 
                 max_attempts = 5
                 attempt = 0
@@ -84,7 +97,7 @@ if st.session_state.story_stage == "input":
 
                 while attempt < max_attempts and not passed_gate:
                     attempt += 1
-                    status_box.markdown(f"🔄 **Screenplay Generation: Loop {attempt}/{max_attempts}...**")
+                    status_box.markdown(f"🔄 **Screenplay Generation ({model_used}): Loop {attempt}/{max_attempts}...**")
                     
                     try:
                         story_command = f"""
@@ -110,12 +123,21 @@ if st.session_state.story_stage == "input":
                             st.session_state.story_stage = "story_ready"
                             break
                     except Exception as loop_err:
-                        st.error(f"⚠️ Loop {attempt} Error: {str(loop_err)}")
+                        err_str = str(loop_err)
+                        if "404" in err_str:
+                            st.error("⚠️ Selected model not found. Retrying with backup model...")
+                            model = genai.GenerativeModel('gemini-1.5-pro')
+                        elif "403" in err_str or "suspended" in err_str.lower():
+                            st.error("🚫 **API Key Suspended ဖြစ်နေပါသည်!** Google AI Studio သို့သွား၍ **New Project** ရွေးပြီး API Key အသစ်တစ်ခု ပြန်ထုတ်ပေးပါဗျာ။")
+                            break
+                        else:
+                            st.error(f"⚠️ Loop {attempt} Error: {err_str}")
                     time.sleep(1)
                 
                 status_box.empty()
                 if passed_gate: st.rerun()
-            except Exception as e: st.error(f"Error: {str(e)}")
+            except Exception as e:
+                st.error(f"Error: {str(e)}")
 
 if st.session_state.story_stage in ["story_ready", "scenes_extracted"]:
     st.markdown("<h3 style='color: white;'>📖 Approved Screenplay Script</h3>", unsafe_allow_html=True)
@@ -131,8 +153,7 @@ if st.session_state.story_stage in ["story_ready", "scenes_extracted"]:
     if st.session_state.story_stage == "story_ready":
         if st.button("Separate Screenplay Into Scene Chunks"):
             try:
-                genai.configure(api_key=user_api_key.strip())
-                model = genai.GenerativeModel('gemini-1.5-flash')
+                model, _ = get_working_model(user_api_key)
                 chunk_command = f"Break this script into logical individual scenes using format SCENE_BLOCK_START Scene X: Description Content: Text SCENE_BLOCK_END. Script: {st.session_state.approved_story}"
                 res = model.generate_content(chunk_command)
                 raw_scenes = re.findall(r"SCENE_BLOCK_START(.*?)SCENE_BLOCK_END", res.text, flags=re.DOTALL)
@@ -170,8 +191,7 @@ if st.session_state.story_stage in ["story_ready", "scenes_extracted"]:
                 with col1:
                     if st.button(f"🎬 Generate Shots", key=f"gen_{idx}"):
                         try:
-                            genai.configure(api_key=user_api_key.strip())
-                            model = genai.GenerativeModel('gemini-1.5-flash')
+                            model, _ = get_working_model(user_api_key)
                             
                             if is_scene_one:
                                 char_sheet_instruction = """
