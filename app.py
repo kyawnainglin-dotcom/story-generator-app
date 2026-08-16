@@ -6,7 +6,7 @@ import re
 import base64
 import os
 
-st.set_page_config(page_title="AI Director Master Shot-List Studio (Gemini Safety Fix)", layout="wide")
+st.set_page_config(page_title="AI Director Master Shot-List Studio", layout="wide")
 
 def get_base64_of_bin_file(bin_file):
     with open(bin_file, 'rb') as f:
@@ -51,32 +51,28 @@ story_type = st.sidebar.selectbox("Genre 1", ["Drama", "Horror", "Romance", "Fan
 secondary_type = st.sidebar.selectbox("Genre 2", ["None", "Action", "Drama", "Thriller", "Comedy", "Romance", "Mystery"])
 art_style = st.sidebar.selectbox("Style", ["Japan Animation Style (Anime)", "3D Disney Cartoon Style", "Realistic Cinematic Movie", "Cyberpunk Art"])
 image_ratio = st.sidebar.selectbox("Ratio", ["16:9", "9:16", "4:3", "1:1"])
-
-user_api_key = st.sidebar.text_input("Gemini API Key", type="password", help="aistudio.google.com တွင် ရယူပါ")
-
-# Safety Configuration အားလုံးကို ပိတ်ထားသည့် Block
-low_safety = [
-    {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
-    {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
-    {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
-    {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
-]
+user_api_key = st.sidebar.text_input("Gemini API Key", type="password")
 
 st.markdown("<div class='main-content'>", unsafe_allow_html=True)
-st.title("AI Director's Master Script & Shot Board")
+st.title("Director's Master Script & Shot Board")
 
 if st.session_state.story_stage == "input":
-    story_concept = st.text_input("Story Concept", placeholder="ဇတ်လမ်းအကျဉ်းကို ရေးပါ...")
+    story_concept = st.text_input("Story Concept", placeholder="ဇတ်လမ်းအကျဉ်း")
     total_target_seconds = (duration_min * 60) + duration_sec
     
     if st.button("Step 1: Brainstorm Master Screenplay"):
-        if not user_api_key: st.error("Gemini API Key လိုအပ်ပါသည်။")
+        if not user_api_key: st.error("API Key လိုအပ်ပါသည်။")
         elif total_target_seconds == 0: st.error("ကျေးဇူးပြု၍ အချိန်သတ်မှတ်ပေးပါ။")
         else:
             try:
-                genai.configure(api_key=user_api_key)
-                model = genai.GenerativeModel('gemini-2.5-flash', safety_settings=low_safety)
+                genai.configure(api_key=user_api_key.strip())
+                # Model Name ကို gemini-1.5-flash သို့ ပြောင်းလဲထားပါသည်
+                model = genai.GenerativeModel('gemini-1.5-flash')
                 
+                max_attempts = 5
+                attempt = 0
+                passed_gate = False
+                status_box = st.empty()
                 combo_genre = story_type if secondary_type == "None" else f"{story_type} + {secondary_type}"
                 
                 if total_target_seconds <= 60:
@@ -86,26 +82,39 @@ if st.session_state.story_stage == "input":
                 else:
                     length_instruction = "EPIC MULTI-ACT SCRIPT. Detailed multi-scene timeline (5+ scenes)."
 
-                with st.spinner("🔄 Gemini မှ Master Screenplay ကို ဖန်တီးပေးနေပါသည်..."):
-                    story_command = f"""
-                    Write a 100% highly original, creative fictional movie screenplay based loosely on: '{story_concept}'. 
-                    Do NOT copy any existing copyrighted dialogues, real movies, or books. Make it unique.
-                    Genre: {combo_genre}. Language: Write in {story_language}.
-                    Scale Constraint: {length_instruction}
+                while attempt < max_attempts and not passed_gate:
+                    attempt += 1
+                    status_box.markdown(f"🔄 **Screenplay Generation: Loop {attempt}/{max_attempts}...**")
                     
-                    Format:
-                    📌 SCRIPT TITLE: [Title]
-                    📖 FULL SCREENPLAY: [Write scene headings and character dialogues]
-                    """
-                    
-                    response = model.generate_content(story_command)
-                    ai_text = response.text
-                    
-                    if ai_text:
-                        st.session_state.approved_story = ai_text.strip()
-                        st.session_state.story_analysis = {"genre": combo_genre}
-                        st.session_state.story_stage = "story_ready"
-                        st.rerun()
+                    try:
+                        story_command = f"""
+                        Write a 100% highly original, creative fictional movie screenplay based loosely on: '{story_concept}'. 
+                        Do NOT copy any existing copyrighted dialogues, real movies, or books. Make it unique.
+                        Genre: {combo_genre}. Language: Write in {story_language}.
+                        Scale Constraint: {length_instruction}
+                        
+                        Format:
+                        📌 SCRIPT TITLE: [Title]
+                        📖 FULL SCREENPLAY: [Write scene headings and character dialogues]
+                        """
+                        response = model.generate_content(story_command)
+                        
+                        if response.candidates and response.candidates[0].finish_reason.name in ["RECITATION", "8"]:
+                            st.error(f"⚠️ Loop {attempt}: Gemini Safety Blocked. ကျော်လိုက်ပါတယ်။")
+                            continue
+                            
+                        if response and response.text:
+                            passed_gate = True
+                            st.session_state.approved_story = response.text.strip()
+                            st.session_state.story_analysis = {"genre": combo_genre}
+                            st.session_state.story_stage = "story_ready"
+                            break
+                    except Exception as loop_err:
+                        st.error(f"⚠️ Loop {attempt} Error: {str(loop_err)}")
+                    time.sleep(1)
+                
+                status_box.empty()
+                if passed_gate: st.rerun()
             except Exception as e: st.error(f"Error: {str(e)}")
 
 if st.session_state.story_stage in ["story_ready", "scenes_extracted"]:
@@ -122,13 +131,11 @@ if st.session_state.story_stage in ["story_ready", "scenes_extracted"]:
     if st.session_state.story_stage == "story_ready":
         if st.button("Separate Screenplay Into Scene Chunks"):
             try:
-                genai.configure(api_key=user_api_key)
-                model = genai.GenerativeModel('gemini-2.5-flash', safety_settings=low_safety)
+                genai.configure(api_key=user_api_key.strip())
+                model = genai.GenerativeModel('gemini-1.5-flash')
                 chunk_command = f"Break this script into logical individual scenes using format SCENE_BLOCK_START Scene X: Description Content: Text SCENE_BLOCK_END. Script: {st.session_state.approved_story}"
-                
                 res = model.generate_content(chunk_command)
-                raw_text = res.text
-                raw_scenes = re.findall(r"SCENE_BLOCK_START(.*?)SCENE_BLOCK_END", raw_text, flags=re.DOTALL)
+                raw_scenes = re.findall(r"SCENE_BLOCK_START(.*?)SCENE_BLOCK_END", res.text, flags=re.DOTALL)
                 
                 scenes_list = []
                 for s in raw_scenes:
@@ -163,21 +170,21 @@ if st.session_state.story_stage in ["story_ready", "scenes_extracted"]:
                 with col1:
                     if st.button(f"🎬 Generate Shots", key=f"gen_{idx}"):
                         try:
-                            genai.configure(api_key=user_api_key)
-                            model = genai.GenerativeModel('gemini-2.5-flash', safety_settings=low_safety)
+                            genai.configure(api_key=user_api_key.strip())
+                            model = genai.GenerativeModel('gemini-1.5-flash')
                             
                             if is_scene_one:
-                                char_sheet_instruction = f"""
+                                char_sheet_instruction = """
                                 ⚠️ CRITICAL MANDATORY LAW (ONLY FOR SCENE 1):
                                 At the very top of your output, you MUST generate a dedicated '👥 CHARACTER MODEL SHEET PROFILES' block. 
                                 For every key character in this screenplay, generate a detailed Midjourney Model Sheet Prompt containing:
                                 - Age, Exact Height/Physique, Skin Tone, and specific Outfits.
                                 - Explicit multiple turnaround expressions and angles: 'character sheet, multiple turnaround poses, front view, back view, side view, multiple facial expressions and emotional impressions'.
-                                - Render Style: {mj_style} --ar 1:1
+                                - Render Style: {art_mj_style} --ar 1:1
                                 """
-                                structure_format = f"""
+                                structure_format = """
                                 👥 CHARACTER MODEL SHEET PROFILES:
-                                * [Character Name]: [Age, Height, Skin Tone, Detailed Clothing], character sheet, multiple turnaround poses, front view, back view, side view, multiple facial expressions, Style: {mj_style} --ar 1:1
+                                * [Character Name]: [Age, Height, Skin Tone, Detailed Clothing], character sheet, multiple turnaround poses, front view, back view, side view, multiple facial expressions, Style: {art_mj_style} --ar 1:1
                                 
                                 --------------------------------------------------
                                 """
@@ -191,32 +198,21 @@ if st.session_state.story_stage in ["story_ready", "scenes_extracted"]:
                             
                             {char_sheet_clause}
                             
-                            ⚠️ CINEMATIC PACING & EDITING RULES (CRITICAL):
-                            - For Dialogue & Conversation: DO NOT make a single shot last the entire dialogue. Split long dialogues into multiple rhythmic shots (Cut every 3 seconds). Rotate camera angles! Use combinations of: Medium Shot (MS), Close-Up (CU), Over-the-Shoulder (OTS), and Reaction Shots of the listener.
-                            - Shot Duration Limits: 
-                               * Dialogue/Action Shots: Strictly 3 to 4 seconds per shot.
-                               * Scenery/Establishing Shots: 7 to 10 seconds to show the atmosphere.
-                            
                             ⚠️ MANDATORY OUTPUT VERIFICATION RULES:
                             - Verify that every Image Prompt literally starts with the camera shot type (e.g. Extreme Wide Shot, Medium Shot, Close Up Shot).
                             - Verify that every Video Prompt contains both camera animation movement keywords and the specific kinetic motion of the characters.
                             - Ensure the exact structural order requested below is followed strictly.
                             
-                            ⚠️ COPYRIGHT & SAFETY RULES:
-                            - DO NOT use exact copyrighted character names, real celebrities, or trademarked brand names in the Midjourney/Runway prompts.
-                            - Replace copyrighted studio terms with general descriptive design words (e.g., instead of writing 'Disney style', write '3D Pixar-inspired animated stylized character with soft clay lighting and expressive eyes').
-                            - Avoid overly aggressive, lethal, or adult keywords that might trigger Gemini's built-in safety blocks.
-                            
                             Structure Your Entire Response Exactly Like This:
                             {structure_clause}
                             
-                            🎬 SHOT [Scene Number].[Shot Number] - [Duration: X Seconds] (Note: Keep it 3-4s for dialogue/action, 7-10s for scenery)
+                            🎬 SHOT [Scene Number].[Shot Number] - [Duration: X Seconds]
                             
-                            🎨 Image Prompt (Midjourney): [MUST start with Camera Framing/Angle, e.g., 'A dramatic medium close-up shot of...']. Describe the character's facial expression, exact clothing, environmental background details, cinematic lighting (e.g., cinematic lighting, volumetric dust, moody atmosphere, depth of field), shot captured on 35mm lens, photorealistic masterwork, followed strictly by style: {art_mj_style} --ar {art_ratio}
+                            🎨 Image Prompt (Midjourney): [MUST start with the Camera Framing/Angle keyword, e.g., 'An extreme wide shot establishing shot of...', 'A close up shot of...']. Describe the environment and character states clearly following style: {art_mj_style} --ar {art_ratio}
                             
                             👥 DIALOGUE / NARRATION: [Character Name or N/A]: "[Script line or narration text translated to {story_lang}]"
                             
-                            🎥 Video Prompt & Direction (Runway/Luma): [Describe the precise cinematic motion]. Combine exact camera movement speed (e.g., 'Slow cinematic pan right', 'Subtle push in', 'Fast crane down') with the character's physical micro-expressions and body language. Add physics motion details (e.g., 'natural hair movement, clothes swaying in the wind, photorealistic cinematic physics, seamless high-quality motion'), Motion Style: {art_v_style}
+                            🎥 Video Prompt & Direction (Runway/Luma): [Combine Camera Movement like Pan/Zoom/Tilt with the characters' physical action actions], Motion Style: {art_v_style}
                             
                             🎵 Sound Style & SFX/Solfeggio: [Character voice delivery parameters] + [Audio atmosphere background music parameters for Suno/Udio]
                             
@@ -232,11 +228,12 @@ if st.session_state.story_stage in ["story_ready", "scenes_extracted"]:
                             )
                             
                             with st.spinner(f"{scene['title']} အတွက် အထူးပြင်ဆင်ထားသော Prompts များ ထုတ်လုပ်နေသည်..."):
-                                res_shot = model.generate_content(shot_command)
-                                shot_text = res_shot.text
+                                response = model.generate_content(shot_command)
                                 
-                                if shot_text:
-                                    st.session_state.scene_boards[idx] = shot_text.strip()
+                                if response.candidates and response.candidates[0].finish_reason.name in ["RECITATION", "8"]:
+                                    st.error("⚠️ Gemini Safety Blocked ဖြစ်သွားပြန်ပါတယ်။ '🎬 Generate Shots' ကို နောက်တစ်ကြိမ် ပြန်နှိပ်ပေးပါဗျာ။")
+                                elif response and response.text:
+                                    st.session_state.scene_boards[idx] = response.text.strip()
                                     st.rerun()
                         except Exception as e: st.error(f"API Error: {str(e)}")
                 
