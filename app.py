@@ -37,51 +37,31 @@ st.markdown(custom_css, unsafe_allow_html=True)
 def get_genai_client(api_key):
     return genai.Client(api_key=api_key.strip())
 
+# Quality မြင့်မားသော Model များကို ဦးစားပေး ခေါ်ယူသည့် Function
 def generate_text_content(client, prompt_text):
-    # ၁။ သင့် API Key အောက်တွင် တကယ် အလုပ်လုပ်နိုင်သော မော်ဒယ်များ စာရင်းကို အရင် ဆွဲယူမည်
-    available_models = []
-    try:
-        for m in client.models.list():
-            # generate_content လုပ်နိုင်သော မော်ဒယ်များကိုသာ ရွေးမည်
-            if hasattr(m, 'supported_generation_methods') and 'generateContent' in m.supported_generation_methods:
-                available_models.append(m.name)
-            elif not hasattr(m, 'supported_generation_methods'):
-                available_models.append(m.name)
-    except Exception:
-        pass
-
-    # ၂။ အကယ်၍ List ဆွဲရရှိပါက Dynamic နည်းလမ်းဖြင့် ခေါ်ယူမည်
-    if available_models:
-        # Flash သို့မဟုတ် Pro ပါသည့် မော်ဒယ်ကို ဦးစားပေးမည်
-        priority_models = [m for m in available_models if 'flash' in m or 'pro' in m]
-        target_list = priority_models if priority_models else available_models
-        
-        for model_name in target_list:
-            try:
-                response = client.models.generate_content(
-                    model=model_name,
-                    contents=prompt_text,
-                )
-                if response and response.text:
-                    return response, model_name
-            except Exception:
-                continue
-
-    # ၃။ List ရယူ၍ မရခဲ့ပါက 2.0-flash ကို တိုက်ရိုက် Fallback အဖြစ် သုံးမည်
-    fallback_models = ['gemini-2.0-flash', 'models/gemini-2.0-flash']
+    candidates = [
+        'gemini-2.5-pro',
+        'gemini-2.0-pro-exp-02-05',
+        'gemini-1.5-pro',
+        'gemini-2.0-flash',
+        'gemini-1.5-flash'
+    ]
+    
     last_err = None
-    for fb_model in fallback_models:
+    for model_name in candidates:
         try:
+            # စာလုံးရေ အရှည်ကြီး ထွက်လာစေရန် max_output_tokens: 8192 သတ်မှတ်ထားပါသည်
             response = client.models.generate_content(
-                model=fb_model,
+                model=model_name,
                 contents=prompt_text,
+                config={'max_output_tokens': 8192, 'temperature': 0.75}
             )
             if response and response.text:
-                return response, fb_model
+                return response, model_name
         except Exception as e:
             last_err = e
             continue
-
+            
     raise Exception(f"API Error: {str(last_err)}")
 
 if "story_stage" not in st.session_state: st.session_state.story_stage = "input"
@@ -93,7 +73,7 @@ if "scene_boards" not in st.session_state: st.session_state.scene_boards = {}
 st.sidebar.markdown("<h2>⚙️ Production Settings</h2>", unsafe_allow_html=True)
 story_language = st.sidebar.radio("Output Language", ["Myanmar", "English"])
 col_min, col_sec = st.sidebar.columns(2)
-duration_min = col_min.number_input("Minutes", min_value=0, max_value=40, value=1)
+duration_min = col_min.number_input("Minutes", min_value=0, max_value=40, value=10)
 duration_sec = col_sec.number_input("Seconds", min_value=0, max_value=59, value=0)
 
 story_type = st.sidebar.selectbox("Genre 1", ["Drama", "Horror", "Romance", "Fantasy", "Sci-Fi", "Comedy", "Action"])
@@ -106,7 +86,7 @@ st.markdown("<div class='main-content'>", unsafe_allow_html=True)
 st.title("Director's Master Script & Shot Board")
 
 if st.session_state.story_stage == "input":
-    story_concept = st.text_input("Story Concept", placeholder="ဇတ်လမ်းအကျဉ်း")
+    story_concept = st.text_input("Story Concept", placeholder="ဇာတ်လမ်းအကျဉ်း")
     total_target_seconds = (duration_min * 60) + duration_sec
     
     if st.button("Step 1: Brainstorm Master Screenplay"):
@@ -115,43 +95,72 @@ if st.session_state.story_stage == "input":
         else:
             try:
                 client = get_genai_client(user_api_key)
+                
+                # Loop 5 ကြိမ် စစ်ဆေးသည့် စနစ်
+                max_attempts = 5
+                attempt = 0
+                passed_gate = False
                 status_box = st.empty()
                 combo_genre = story_type if secondary_type == "None" else f"{story_type} + {secondary_type}"
                 
+                # အချိန်အလိုက် စာလုံးရေနှင့် Scene အရေအတွက် တိကျစွာ သတ်မှတ်ပေးခြင်း
                 if total_target_seconds <= 60:
-                    length_instruction = "SHORT SCREENPLAY. Must strictly be 1-2 distinct scenes."
+                    length_instruction = "SHORT SCREENPLAY (1-2 distinct scenes, around 300 words)."
                 elif total_target_seconds <= 300:
-                    length_instruction = "MEDIUM SCREENPLAY. Must strictly be 3-4 structured scenes."
+                    length_instruction = "MEDIUM SCREENPLAY (3-4 structured scenes, around 1000 words)."
                 else:
-                    length_instruction = "EPIC MULTI-ACT SCRIPT. Detailed multi-scene timeline (5+ scenes)."
+                    length_instruction = "EPIC DETAILED LONG SCREENPLAY (Strictly 8 to 12 distinct scenes, around 2500+ words). Write comprehensive deep dialogues, elaborate scene descriptions, emotion, and character actions for each scene. DO NOT summarize or skip events."
 
-                status_box.markdown("🔄 **Screenplay Generation in progress...**")
+                while attempt < max_attempts and not passed_gate:
+                    attempt += 1
+                    status_box.markdown(f"🔄 **Screenplay Generation: Loop {attempt}/{max_attempts}...**")
+                    
+                    try:
+                        # Hollywood Master Script Command Prompting
+                        story_command = f"""
+                        You are an award-winning master Hollywood Screenwriter and Senior Script Doctor.
+                        Write a 100% highly original, creative, deeply emotional, cinematic fictional movie screenplay based loosely on: '{story_concept}'. 
+                        
+                        Genre: {combo_genre}. 
+                        Language: Write in {story_language}.
+                        Scale Constraint: {length_instruction}
+                        
+                        CRITICAL SCREENWRITING DIRECTIVES:
+                        1. Provide deep narrative depth, dramatic tension, character arcs, and vivid scene world-building.
+                        2. Ensure every scene has explicit visual action directions and rich, natural multi-turn dialogues.
+                        3. Do NOT abbreviate scenes or write summaries. Write fully expanded scenes from start to finish.
+                        
+                        Format:
+                        📌 SCRIPT TITLE: [Title]
+                        📖 FULL SCREENPLAY:
+                        [Write complete scene headings like 'SCENE 1: EXT. LOCATION - DAY' followed by rich scene descriptions and full character dialogues]
+                        """
+                        
+                        response, model_used = generate_text_content(client, story_command)
+                        
+                        # Safety / Blocked စစ်ဆေးခြင်း
+                        if response.candidates and str(response.candidates[0].finish_reason) in ["RECITATION", "SAFETY", "8"]:
+                            st.error(f"⚠️ Loop {attempt}: Gemini Safety Blocked. Retrying next loop...")
+                            continue
+                            
+                        if response and response.text:
+                            passed_gate = True
+                            st.session_state.approved_story = response.text.strip()
+                            st.session_state.story_analysis = {"genre": combo_genre}
+                            st.session_state.story_stage = "story_ready"
+                            break
+                    except Exception as loop_err:
+                        st.error(f"⚠️ Loop {attempt} Error: {str(loop_err)}")
+                    time.sleep(1)
                 
-                story_command = f"""
-                Write a 100% highly original, creative fictional movie screenplay based loosely on: '{story_concept}'. 
-                Do NOT copy any existing copyrighted dialogues, real movies, or books. Make it unique.
-                Genre: {combo_genre}. Language: Write in {story_language}.
-                Scale Constraint: {length_instruction}
-                
-                Format:
-                📌 SCRIPT TITLE: [Title]
-                📖 FULL SCREENPLAY: [Write scene headings and character dialogues]
-                """
-                
-                response, model_used = generate_text_content(client, story_command)
-                
-                if response and response.text:
-                    st.session_state.approved_story = response.text.strip()
-                    st.session_state.story_analysis = {"genre": combo_genre}
-                    st.session_state.story_stage = "story_ready"
-                    status_box.empty()
-                    st.rerun()
+                status_box.empty()
+                if passed_gate: st.rerun()
             except Exception as e:
                 st.error(f"Error: {str(e)}")
 
 if st.session_state.story_stage in ["story_ready", "scenes_extracted"]:
     st.markdown("<h3 style='color: white;'>📖 Approved Screenplay Script</h3>", unsafe_allow_html=True)
-    st.text_area("Story View", value=st.session_state.approved_story, height=200, label_visibility="collapsed")
+    st.text_area("Story View", value=st.session_state.approved_story, height=350, label_visibility="collapsed")
     
     if st.button("❌ Discard Project"):
         st.session_state.story_stage = "input"
