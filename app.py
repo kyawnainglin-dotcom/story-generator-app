@@ -34,35 +34,54 @@ custom_css = f"""
 """
 st.markdown(custom_css, unsafe_allow_html=True)
 
-# Google GenAI SDK
-# Client ဖန်တီးရာတွင် Stable API version ('v1') ကို အတင်းသတ်မှတ်ပေးမည်
 def get_genai_client(api_key):
-    return genai.Client(
-        api_key=api_key.strip(),
-        http_options={'api_version': 'v1'}
-    )
+    return genai.Client(api_key=api_key.strip())
 
 def generate_text_content(client, prompt_text):
-    # v1 API တွင် လက်ရှိ တရားဝင် သုံးနိုင်သော Stable Models
-    candidates = [
-        'gemini-2.0-flash',
-        'gemini-2.5-flash',
-        'gemini-1.5-flash'
-    ]
-    
+    # ၁။ သင့် API Key အောက်တွင် တကယ် အလုပ်လုပ်နိုင်သော မော်ဒယ်များ စာရင်းကို အရင် ဆွဲယူမည်
+    available_models = []
+    try:
+        for m in client.models.list():
+            # generate_content လုပ်နိုင်သော မော်ဒယ်များကိုသာ ရွေးမည်
+            if hasattr(m, 'supported_generation_methods') and 'generateContent' in m.supported_generation_methods:
+                available_models.append(m.name)
+            elif not hasattr(m, 'supported_generation_methods'):
+                available_models.append(m.name)
+    except Exception:
+        pass
+
+    # ၂။ အကယ်၍ List ဆွဲရရှိပါက Dynamic နည်းလမ်းဖြင့် ခေါ်ယူမည်
+    if available_models:
+        # Flash သို့မဟုတ် Pro ပါသည့် မော်ဒယ်ကို ဦးစားပေးမည်
+        priority_models = [m for m in available_models if 'flash' in m or 'pro' in m]
+        target_list = priority_models if priority_models else available_models
+        
+        for model_name in target_list:
+            try:
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=prompt_text,
+                )
+                if response and response.text:
+                    return response, model_name
+            except Exception:
+                continue
+
+    # ၃။ List ရယူ၍ မရခဲ့ပါက 2.0-flash ကို တိုက်ရိုက် Fallback အဖြစ် သုံးမည်
+    fallback_models = ['gemini-2.0-flash', 'models/gemini-2.0-flash']
     last_err = None
-    for model_name in candidates:
+    for fb_model in fallback_models:
         try:
             response = client.models.generate_content(
-                model=model_name,
+                model=fb_model,
                 contents=prompt_text,
             )
             if response and response.text:
-                return response, model_name
+                return response, fb_model
         except Exception as e:
             last_err = e
             continue
-            
+
     raise Exception(f"API Error: {str(last_err)}")
 
 if "story_stage" not in st.session_state: st.session_state.story_stage = "input"
