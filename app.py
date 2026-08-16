@@ -35,14 +35,27 @@ custom_css = f"""
 """
 st.markdown(custom_css, unsafe_allow_html=True)
 
-# Helper function to get model securely
+# API Account အောက်မှာ အမှန်တကယ် အလုပ်လုပ်တဲ့ Model ကို အလိုအလျောက် ရှာဖွေပေးမည့် Function
 def get_working_model(api_key):
     genai.configure(api_key=api_key.strip())
-    # 2026 လက်ရှိ အသုံးပြုနိုင်သော Model များကို ဦးစားပေးစဉ်ထားခြင်း
+    
+    # 1. API Account က ရရှိနိုင်သော မော်ဒယ်များကို တိုက်ရိုက် ရှာဖွေခြင်း
+    try:
+        available_models = [m.name.replace("models/", "") for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+        for m in available_models:
+            if "flash" in m:
+                return genai.GenerativeModel(m), m
+        if available_models:
+            return genai.GenerativeModel(available_models[0]), available_models[0]
+    except Exception:
+        pass
+
+    # 2. တကယ်လို့ Auto List လုပ်လို့မရပါက Backup Candidates များဖြင့် အလိုအလျောက် စမ်းပေးခြင်း
     model_candidates = [
-        'gemini-2.5-flash',
-        'gemini-2.5-pro',
-        'gemini-2.5-flash-lite'
+        'gemini-1.5-flash',
+        'gemini-1.5-flash-latest',
+        'gemini-1.5-pro',
+        'gemini-pro'
     ]
     
     for model_name in model_candidates:
@@ -52,7 +65,7 @@ def get_working_model(api_key):
         except Exception:
             continue
             
-    return genai.GenerativeModel('gemini-2.5-flash'), 'gemini-2.5-flash'
+    return genai.GenerativeModel('gemini-1.5-flash'), 'gemini-1.5-flash'
 
 if "story_stage" not in st.session_state: st.session_state.story_stage = "input"
 if "approved_story" not in st.session_state: st.session_state.approved_story = ""
