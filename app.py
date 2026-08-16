@@ -35,15 +35,20 @@ custom_css = f"""
 """
 st.markdown(custom_css, unsafe_allow_html=True)
 
-# API Account အောက်မှာ အမှန်တကယ် အလုပ်လုပ်တဲ့ Model ကို အလိုအလျောက် ရှာဖွေပေးမည့် Function
+# API Account အောက်တွင် တကယ်တမ်း အလုပ်လုပ်သော မော်ဒယ်ကို ရှာဖွေပေးမည့် Function
 def get_working_model(api_key):
     genai.configure(api_key=api_key.strip())
     
     # 1. API Account က ရရှိနိုင်သော မော်ဒယ်များကို တိုက်ရိုက် ရှာဖွေခြင်း
     try:
-        available_models = [m.name.replace("models/", "") for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+        available_models = [
+            m.name.replace("models/", "") 
+            for m in genai.list_models() 
+            if 'generateContent' in m.supported_generation_methods
+        ]
+        # အသုံးများသော flash မော်ဒယ်များကို ဦးစားပေးရှာဖွေခြင်း
         for m in available_models:
-            if "flash" in m:
+            if "1.5-flash" in m or "flash" in m:
                 return genai.GenerativeModel(m), m
         if available_models:
             return genai.GenerativeModel(available_models[0]), available_models[0]
@@ -265,7 +270,7 @@ if st.session_state.story_stage in ["story_ready", "scenes_extracted"]:
                                 response = model.generate_content(shot_command)
                                 
                                 if response.candidates and response.candidates[0].finish_reason.name in ["RECITATION", "8"]:
-                                    st.error("⚠️ Gemini Safety Blocked ဖြစ်သွားပြန်ပါတယ်။ '🎬 Generate Shots' ကို နောက်တစ်ကြိမ် ပြန်နှိပ်ပေးပါဗျာ။")
+                                    st.error("⚠️ Gemini Safety Blocked ဖြစ်သွားပါသည်! '🎬 Generate Shots' ကို ထပ်မံ နှိပ်ပေးပါ။")
                                 elif response and response.text:
                                     st.session_state.scene_boards[idx] = response.text.strip()
                                     st.rerun()
