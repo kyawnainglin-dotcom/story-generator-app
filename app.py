@@ -1,5 +1,5 @@
 import streamlit as st
-import google.generativeai as genai
+from google import genai
 import random
 import time
 import re
@@ -35,42 +35,38 @@ custom_css = f"""
 """
 st.markdown(custom_css, unsafe_allow_html=True)
 
-# API Account အောက်တွင် တကယ်တမ်း အလုပ်လုပ်သော မော်ဒယ်ကို စမ်းသပ်ရှာဖွေပေးမည့် Function
-def get_working_model(api_key):
-    genai.configure(api_key=api_key.strip())
-    
-    # စမ်းသပ်မည့် Valid Model List မ်ား
-    model_candidates = [
-        'gemini-1.5-flash',
-        'gemini-1.5-pro',
-        'gemini-2.0-flash',
-        'gemini-pro'
-    ]
-    
-    # 1. Candidate မော်ဒယ်များကို အစဉ်လိုက် စမ်းသပ်ခေါ်ယူခြင်း
-    for model_name in model_candidates:
+# Google GenAI SDK အသစ်ဖြင့် API အလုပ်လုပ်စေသော Function
+def get_genai_client(api_key):
+    return genai.Client(api_key=api_key.strip())
+
+def generate_text_content(client, prompt_text):
+    # API ရရှိနိုင်သော မော်ဒယ်အသစ်များကို ဦးစားပေး စမ်းသပ်ခေါ်ယူခြင်း
+    candidates = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-pro']
+    for model_name in candidates:
         try:
-            model = genai.GenerativeModel(model_name)
-            return model, model_name
+            response = client.models.generate_content(
+                model=model_name,
+                contents=prompt_text,
+            )
+            return response, model_name
         except Exception:
             continue
-
-    # 2. ရရှိနိုင်သော မော်ဒယ်များ စာရင်းမှ တိုက်ရိုက် ရှာဖွေခြင်း
+            
+    # အထက်ပါမော်ဒယ်များ မရပါက API ထဲမှ Dynamic ရှာဖွေခြင်း
     try:
-        available_models = [
-            m.name.replace("models/", "") 
-            for m in genai.list_models() 
-            if 'generateContent' in m.supported_generation_methods
-        ]
-        for m in available_models:
-            if "flash" in m:
-                return genai.GenerativeModel(m), m
-        if available_models:
-            return genai.GenerativeModel(available_models[0]), available_models[0]
+        models = client.models.list()
+        for m in models:
+            if "flash" in m.name or "pro" in m.name:
+                m_id = m.name.replace("models/", "")
+                response = client.models.generate_content(
+                    model=m_id,
+                    contents=prompt_text,
+                )
+                return response, m_id
     except Exception:
         pass
-            
-    return genai.GenerativeModel('gemini-1.5-flash'), 'gemini-1.5-flash'
+        
+    raise Exception("သင့် API Key အောက်တွင် ရရှိနိုင်သော Gemini Model ရှာမတွေ့ပါ။")
 
 if "story_stage" not in st.session_state: st.session_state.story_stage = "input"
 if "approved_story" not in st.session_state: st.session_state.approved_story = ""
@@ -102,7 +98,7 @@ if st.session_state.story_stage == "input":
         elif total_target_seconds == 0: st.error("ကျေးဇူးပြု၍ အချိန်သတ်မှတ်ပေးပါ။")
         else:
             try:
-                model, model_used = get_working_model(user_api_key)
+                client = get_genai_client(user_api_key)
                 
                 max_attempts = 5
                 attempt = 0
@@ -119,7 +115,7 @@ if st.session_state.story_stage == "input":
 
                 while attempt < max_attempts and not passed_gate:
                     attempt += 1
-                    status_box.markdown(f"🔄 **Screenplay Generation ({model_used}): Loop {attempt}/{max_attempts}...**")
+                    status_box.markdown(f"🔄 **Screenplay Generation: Loop {attempt}/{max_attempts}...**")
                     
                     try:
                         story_command = f"""
@@ -132,9 +128,9 @@ if st.session_state.story_stage == "input":
                         📌 SCRIPT TITLE: [Title]
                         📖 FULL SCREENPLAY: [Write scene headings and character dialogues]
                         """
-                        response = model.generate_content(story_command)
+                        response, model_used = generate_text_content(client, story_command)
                         
-                        if response.candidates and response.candidates[0].finish_reason.name in ["RECITATION", "8"]:
+                        if response.candidates and str(response.candidates[0].finish_reason) in ["RECITATION", "SAFETY", "8"]:
                             st.error(f"⚠️ Loop {attempt}: Gemini Safety Blocked. ကျော်လိုက်ပါတယ်။")
                             continue
                             
@@ -172,9 +168,9 @@ if st.session_state.story_stage in ["story_ready", "scenes_extracted"]:
     if st.session_state.story_stage == "story_ready":
         if st.button("Separate Screenplay Into Scene Chunks"):
             try:
-                model, _ = get_working_model(user_api_key)
+                client = get_genai_client(user_api_key)
                 chunk_command = f"Break this script into logical individual scenes using format SCENE_BLOCK_START Scene X: Description Content: Text SCENE_BLOCK_END. Script: {st.session_state.approved_story}"
-                res = model.generate_content(chunk_command)
+                res, _ = generate_text_content(client, chunk_command)
                 raw_scenes = re.findall(r"SCENE_BLOCK_START(.*?)SCENE_BLOCK_END", res.text, flags=re.DOTALL)
                 
                 scenes_list = []
@@ -210,7 +206,7 @@ if st.session_state.story_stage in ["story_ready", "scenes_extracted"]:
                 with col1:
                     if st.button(f"🎬 Generate Shots", key=f"gen_{idx}"):
                         try:
-                            model, _ = get_working_model(user_api_key)
+                            client = get_genai_client(user_api_key)
                             
                             if is_scene_one:
                                 char_sheet_instruction = """
@@ -267,9 +263,9 @@ if st.session_state.story_stage in ["story_ready", "scenes_extracted"]:
                             )
                             
                             with st.spinner(f"{scene['title']} အတွက် အထူးပြင်ဆင်ထားသော Prompts များ ထုတ်လုပ်နေသည်..."):
-                                response = model.generate_content(shot_command)
+                                response, _ = generate_text_content(client, shot_command)
                                 
-                                if response.candidates and response.candidates[0].finish_reason.name in ["RECITATION", "8"]:
+                                if response.candidates and str(response.candidates[0].finish_reason) in ["RECITATION", "SAFETY", "8"]:
                                     st.error("⚠️ Gemini Safety Blocked ဖြစ်သွားပါသည်! '🎬 Generate Shots' ကို ထပ်မံ နှိပ်ပေးပါ။")
                                 elif response and response.text:
                                     st.session_state.scene_boards[idx] = response.text.strip()
