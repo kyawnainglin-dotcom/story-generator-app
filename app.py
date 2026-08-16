@@ -35,40 +35,40 @@ custom_css = f"""
 """
 st.markdown(custom_css, unsafe_allow_html=True)
 
-# API Account အောက်တွင် တကယ်တမ်း အလုပ်လုပ်သော မော်ဒယ်ကို ရှာဖွေပေးမည့် Function
+# API Account အောက်တွင် တကယ်တမ်း အလုပ်လုပ်သော မော်ဒယ်ကို စမ်းသပ်ရှာဖွေပေးမည့် Function
 def get_working_model(api_key):
     genai.configure(api_key=api_key.strip())
     
-    # 1. API Account က ရရှိနိုင်သော မော်ဒယ်များကို တိုက်ရိုက် ရှာဖွေခြင်း
-    try:
-        available_models = [
-            m.name.replace("models/", "") 
-            for m in genai.list_models() 
-            if 'generateContent' in m.supported_generation_methods
-        ]
-        # အသုံးများသော flash မော်ဒယ်များကို ဦးစားပေးရှာဖွေခြင်း
-        for m in available_models:
-            if "1.5-flash" in m or "flash" in m:
-                return genai.GenerativeModel(m), m
-        if available_models:
-            return genai.GenerativeModel(available_models[0]), available_models[0]
-    except Exception:
-        pass
-
-    # 2. တကယ်လို့ Auto List လုပ်လို့မရပါက Backup Candidates များဖြင့် အလိုအလျောက် စမ်းပေးခြင်း
+    # စမ်းသပ်မည့် Valid Model List မ်ား
     model_candidates = [
         'gemini-1.5-flash',
-        'gemini-1.5-flash-latest',
         'gemini-1.5-pro',
+        'gemini-2.0-flash',
         'gemini-pro'
     ]
     
+    # 1. Candidate မော်ဒယ်များကို အစဉ်လိုက် စမ်းသပ်ခေါ်ယူခြင်း
     for model_name in model_candidates:
         try:
             model = genai.GenerativeModel(model_name)
             return model, model_name
         except Exception:
             continue
+
+    # 2. ရရှိနိုင်သော မော်ဒယ်များ စာရင်းမှ တိုက်ရိုက် ရှာဖွေခြင်း
+    try:
+        available_models = [
+            m.name.replace("models/", "") 
+            for m in genai.list_models() 
+            if 'generateContent' in m.supported_generation_methods
+        ]
+        for m in available_models:
+            if "flash" in m:
+                return genai.GenerativeModel(m), m
+        if available_models:
+            return genai.GenerativeModel(available_models[0]), available_models[0]
+    except Exception:
+        pass
             
     return genai.GenerativeModel('gemini-1.5-flash'), 'gemini-1.5-flash'
 
