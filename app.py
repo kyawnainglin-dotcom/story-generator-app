@@ -39,11 +39,11 @@ def get_genai_client(api_key):
     return genai.Client(api_key=api_key.strip())
 
 def generate_text_content(client, prompt_text):
-    # Free Key ဖြင့် %100 အလုပ်လုပ်သော Stable Model နာမည်များ
+    # Google GenAI SDK အသစ်အတွက် models/ prefix ကို အပြည့်အစုံ ရေးပေးရပါမည်
     candidates = [
-        'gemini-2.0-flash',
-        'gemini-1.5-flash',
-        'gemini-1.5-pro'
+        'models/gemini-2.0-flash',
+        'models/gemini-1.5-flash',
+        'models/gemini-1.5-pro'
     ]
     
     last_err = None
