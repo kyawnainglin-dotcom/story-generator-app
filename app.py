@@ -40,33 +40,30 @@ def get_genai_client(api_key):
     return genai.Client(api_key=api_key.strip())
 
 def generate_text_content(client, prompt_text):
-    # API ရရှိနိုင်သော မော်ဒယ်အသစ်များကို ဦးစားပေး စမ်းသပ်ခေါ်ယူခြင်း
-    candidates = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-pro']
+    # Google AI Studio တွင် လက်ရှိ ၁၀ဝ% အလုပ်လုပ်သော မော်ဒယ်များ
+    # 'gemini-1.5-flash' သို့မဟုတ် 'gemini-1.5-pro' သည် v1 API အတွက် အတည်ငြိမ်ဆုံးဖြစ်သည်
+    candidates = [
+        'gemini-1.5-flash',
+        'gemini-1.5-pro',
+        'gemini-2.0-flash',
+        'gemini-2.5-flash'
+    ]
+    
+    last_error = None
     for model_name in candidates:
         try:
             response = client.models.generate_content(
                 model=model_name,
                 contents=prompt_text,
             )
-            return response, model_name
-        except Exception:
+            if response and response.text:
+                return response, model_name
+        except Exception as e:
+            last_error = e
             continue
             
-    # အထက်ပါမော်ဒယ်များ မရပါက API ထဲမှ Dynamic ရှာဖွေခြင်း
-    try:
-        models = client.models.list()
-        for m in models:
-            if "flash" in m.name or "pro" in m.name:
-                m_id = m.name.replace("models/", "")
-                response = client.models.generate_content(
-                    model=m_id,
-                    contents=prompt_text,
-                )
-                return response, m_id
-    except Exception:
-        pass
-        
-    raise Exception("သင့် API Key အောက်တွင် ရရှိနိုင်သော Gemini Model ရှာမတွေ့ပါ။")
+    # အကယ်၍ အထက်ပါ မော်ဒယ်အားလုံး မရပါက မိခင် Error ကို ပို့ပေးမည်
+    raise Exception(f"Gemini Model ချိတ်ဆက်မှု မအောင်မြင်ပါ။ Error Details: {str(last_error)}")
 
 if "story_stage" not in st.session_state: st.session_state.story_stage = "input"
 if "approved_story" not in st.session_state: st.session_state.approved_story = ""
