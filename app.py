@@ -1,6 +1,5 @@
 import streamlit as st
 from google import genai
-import random
 import time
 import re
 import base64
@@ -35,21 +34,19 @@ custom_css = f"""
 """
 st.markdown(custom_css, unsafe_allow_html=True)
 
-# Google GenAI SDK အသစ်ဖြင့် API အလုပ်လုပ်စေသော Function
+# Google GenAI SDK
 def get_genai_client(api_key):
     return genai.Client(api_key=api_key.strip())
 
 def generate_text_content(client, prompt_text):
-    # Google AI Studio တွင် လက်ရှိ ၁၀ဝ% အလုပ်လုပ်သော မော်ဒယ်များ
-    # 'gemini-1.5-flash' သို့မဟုတ် 'gemini-1.5-pro' သည် v1 API အတွက် အတည်ငြိမ်ဆုံးဖြစ်သည်
+    # Free Key ဖြင့် %100 အလုပ်လုပ်သော Stable Model နာမည်များ
     candidates = [
-        'gemini-1.5-flash',
-        'gemini-1.5-pro',
         'gemini-2.0-flash',
-        'gemini-2.5-flash'
+        'gemini-1.5-flash',
+        'gemini-1.5-pro'
     ]
     
-    last_error = None
+    last_err = None
     for model_name in candidates:
         try:
             response = client.models.generate_content(
@@ -59,11 +56,10 @@ def generate_text_content(client, prompt_text):
             if response and response.text:
                 return response, model_name
         except Exception as e:
-            last_error = e
+            last_err = e
             continue
             
-    # အကယ်၍ အထက်ပါ မော်ဒယ်အားလုံး မရပါက မိခင် Error ကို ပို့ပေးမည်
-    raise Exception(f"Gemini Model ချိတ်ဆက်မှု မအောင်မြင်ပါ။ Error Details: {str(last_error)}")
+    raise Exception(f"API Error: {str(last_err)}")
 
 if "story_stage" not in st.session_state: st.session_state.story_stage = "input"
 if "approved_story" not in st.session_state: st.session_state.approved_story = ""
@@ -96,10 +92,6 @@ if st.session_state.story_stage == "input":
         else:
             try:
                 client = get_genai_client(user_api_key)
-                
-                max_attempts = 5
-                attempt = 0
-                passed_gate = False
                 status_box = st.empty()
                 combo_genre = story_type if secondary_type == "None" else f"{story_type} + {secondary_type}"
                 
@@ -110,44 +102,27 @@ if st.session_state.story_stage == "input":
                 else:
                     length_instruction = "EPIC MULTI-ACT SCRIPT. Detailed multi-scene timeline (5+ scenes)."
 
-                while attempt < max_attempts and not passed_gate:
-                    attempt += 1
-                    status_box.markdown(f"🔄 **Screenplay Generation: Loop {attempt}/{max_attempts}...**")
-                    
-                    try:
-                        story_command = f"""
-                        Write a 100% highly original, creative fictional movie screenplay based loosely on: '{story_concept}'. 
-                        Do NOT copy any existing copyrighted dialogues, real movies, or books. Make it unique.
-                        Genre: {combo_genre}. Language: Write in {story_language}.
-                        Scale Constraint: {length_instruction}
-                        
-                        Format:
-                        📌 SCRIPT TITLE: [Title]
-                        📖 FULL SCREENPLAY: [Write scene headings and character dialogues]
-                        """
-                        response, model_used = generate_text_content(client, story_command)
-                        
-                        if response.candidates and str(response.candidates[0].finish_reason) in ["RECITATION", "SAFETY", "8"]:
-                            st.error(f"⚠️ Loop {attempt}: Gemini Safety Blocked. ကျော်လိုက်ပါတယ်။")
-                            continue
-                            
-                        if response and response.text:
-                            passed_gate = True
-                            st.session_state.approved_story = response.text.strip()
-                            st.session_state.story_analysis = {"genre": combo_genre}
-                            st.session_state.story_stage = "story_ready"
-                            break
-                    except Exception as loop_err:
-                        err_str = str(loop_err)
-                        if "403" in err_str or "suspended" in err_str.lower():
-                            st.error("🚫 **API Key Suspended ဖြစ်နေပါသည်!** Google AI Studio သို့သွား၍ **New Project** ရွေးပြီး API Key အသစ်တစ်ခု ပြန်ထုတ်ပေးပါဗျာ။")
-                            break
-                        else:
-                            st.error(f"⚠️ Loop {attempt} Error: {err_str}")
-                    time.sleep(1)
+                status_box.markdown("🔄 **Screenplay Generation in progress...**")
                 
-                status_box.empty()
-                if passed_gate: st.rerun()
+                story_command = f"""
+                Write a 100% highly original, creative fictional movie screenplay based loosely on: '{story_concept}'. 
+                Do NOT copy any existing copyrighted dialogues, real movies, or books. Make it unique.
+                Genre: {combo_genre}. Language: Write in {story_language}.
+                Scale Constraint: {length_instruction}
+                
+                Format:
+                📌 SCRIPT TITLE: [Title]
+                📖 FULL SCREENPLAY: [Write scene headings and character dialogues]
+                """
+                
+                response, model_used = generate_text_content(client, story_command)
+                
+                if response and response.text:
+                    st.session_state.approved_story = response.text.strip()
+                    st.session_state.story_analysis = {"genre": combo_genre}
+                    st.session_state.story_stage = "story_ready"
+                    status_box.empty()
+                    st.rerun()
             except Exception as e:
                 st.error(f"Error: {str(e)}")
 
@@ -230,11 +205,6 @@ if st.session_state.story_stage in ["story_ready", "scenes_extracted"]:
                             
                             {char_sheet_clause}
                             
-                            ⚠️ MANDATORY OUTPUT VERIFICATION RULES:
-                            - Verify that every Image Prompt literally starts with the camera shot type (e.g. Extreme Wide Shot, Medium Shot, Close Up Shot).
-                            - Verify that every Video Prompt contains both camera animation movement keywords and the specific kinetic motion of the characters.
-                            - Ensure the exact structural order requested below is followed strictly.
-                            
                             Structure Your Entire Response Exactly Like This:
                             {structure_clause}
                             
@@ -259,12 +229,9 @@ if st.session_state.story_stage in ["story_ready", "scenes_extracted"]:
                                 art_v_style=v_style
                             )
                             
-                            with st.spinner(f"{scene['title']} အတွက် အထူးပြင်ဆင်ထားသော Prompts များ ထုတ်လုပ်နေသည်..."):
+                            with st.spinner(f"{scene['title']} အတွက် Prompts များ ထုတ်လုပ်နေသည်..."):
                                 response, _ = generate_text_content(client, shot_command)
-                                
-                                if response.candidates and str(response.candidates[0].finish_reason) in ["RECITATION", "SAFETY", "8"]:
-                                    st.error("⚠️ Gemini Safety Blocked ဖြစ်သွားပါသည်! '🎬 Generate Shots' ကို ထပ်မံ နှိပ်ပေးပါ။")
-                                elif response and response.text:
+                                if response and response.text:
                                     st.session_state.scene_boards[idx] = response.text.strip()
                                     st.rerun()
                         except Exception as e: st.error(f"API Error: {str(e)}")
