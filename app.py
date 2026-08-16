@@ -35,15 +35,19 @@ custom_css = f"""
 st.markdown(custom_css, unsafe_allow_html=True)
 
 # Google GenAI SDK
+# Client ဖန်တီးရာတွင် Stable API version ('v1') ကို အတင်းသတ်မှတ်ပေးမည်
 def get_genai_client(api_key):
-    return genai.Client(api_key=api_key.strip())
+    return genai.Client(
+        api_key=api_key.strip(),
+        http_options={'api_version': 'v1'}
+    )
 
 def generate_text_content(client, prompt_text):
-    # Google GenAI SDK အသစ်အတွက် models/ prefix ကို အပြည့်အစုံ ရေးပေးရပါမည်
+    # v1 API တွင် လက်ရှိ တရားဝင် သုံးနိုင်သော Stable Models
     candidates = [
-        'models/gemini-2.0-flash',
-        'models/gemini-1.5-flash',
-        'models/gemini-1.5-pro'
+        'gemini-2.0-flash',
+        'gemini-2.5-flash',
+        'gemini-1.5-flash'
     ]
     
     last_err = None
