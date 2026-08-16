@@ -37,16 +37,28 @@ st.markdown(custom_css, unsafe_allow_html=True)
 def get_genai_client(api_key):
     return genai.Client(api_key=api_key.strip())
 
-# Google GenAI SDK အသစ်အတွက် သေချာ ပေါက် အလုပ်လုပ်မည့် Stable Model List
 def generate_text_content(client, prompt_text):
-    candidates = [
-        'gemini-2.5-pro',
-        'gemini-2.5-flash',
-        'gemini-2.0-flash'
+    available_models = []
+    try:
+        # ၁။ API မှ ရနိုင်သော Model များ စာရင်းယူမည်
+        for m in client.models.list():
+            # Model name မှ 'models/' prefix ကို သန့်စင်ပေးခြင်း
+            clean_name = m.name.replace("models/", "") if hasattr(m, 'name') else str(m)
+            available_models.append(clean_name)
+    except Exception:
+        pass
+
+    # ၂။ လက်ရှိ အသုံးပြုနိုင်သော Pro နှင့် Flash model များကို သီးသန့် ရွေးထုတ်မည်
+    priority_models = [
+        m for m in available_models 
+        if ('flash' in m or 'pro' in m) and ('1.5' not in m and '2.0' not in m)
     ]
     
+    # ရရှိလာသော dynamic list သို့မဟုတ် သေချာပေါက် အလုပ်လုပ်မည့် Hardcoded list ကို သုံးမည်
+    target_list = priority_models if priority_models else ['gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.5-flash-lite']
+
     last_err = None
-    for model_name in candidates:
+    for model_name in target_list:
         try:
             response = client.models.generate_content(
                 model=model_name,
@@ -58,7 +70,7 @@ def generate_text_content(client, prompt_text):
         except Exception as e:
             last_err = e
             continue
-            
+
     raise Exception(f"API Error: {str(last_err)}")
 
 if "story_stage" not in st.session_state: st.session_state.story_stage = "input"
