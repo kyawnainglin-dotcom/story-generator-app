@@ -35,11 +35,15 @@ custom_css = f"""
 """
 st.markdown(custom_css, unsafe_allow_html=True)
 
-# Function to get available model seamlessly
+# Helper function to get model securely
 def get_working_model(api_key):
     genai.configure(api_key=api_key.strip())
-    # Available model options priority list
-    model_candidates = ['gemini-1.5-flash-latest', 'gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-pro']
+    # 2026 လက်ရှိ အသုံးပြုနိုင်သော Model များကို ဦးစားပေးစဉ်ထားခြင်း
+    model_candidates = [
+        'gemini-2.5-flash',
+        'gemini-2.5-pro',
+        'gemini-2.5-flash-lite'
+    ]
     
     for model_name in model_candidates:
         try:
@@ -47,8 +51,8 @@ def get_working_model(api_key):
             return model, model_name
         except Exception:
             continue
-    # Default fallback
-    return genai.GenerativeModel('gemini-1.5-flash-latest'), 'gemini-1.5-flash-latest'
+            
+    return genai.GenerativeModel('gemini-2.5-flash'), 'gemini-2.5-flash'
 
 if "story_stage" not in st.session_state: st.session_state.story_stage = "input"
 if "approved_story" not in st.session_state: st.session_state.approved_story = ""
@@ -124,10 +128,7 @@ if st.session_state.story_stage == "input":
                             break
                     except Exception as loop_err:
                         err_str = str(loop_err)
-                        if "404" in err_str:
-                            st.error("⚠️ Selected model not found. Retrying with backup model...")
-                            model = genai.GenerativeModel('gemini-1.5-pro')
-                        elif "403" in err_str or "suspended" in err_str.lower():
+                        if "403" in err_str or "suspended" in err_str.lower():
                             st.error("🚫 **API Key Suspended ဖြစ်နေပါသည်!** Google AI Studio သို့သွား၍ **New Project** ရွေးပြီး API Key အသစ်တစ်ခု ပြန်ထုတ်ပေးပါဗျာ။")
                             break
                         else:
