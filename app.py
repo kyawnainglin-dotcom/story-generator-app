@@ -37,14 +37,15 @@ st.markdown(custom_css, unsafe_allow_html=True)
 def get_genai_client(api_key):
     return genai.Client(api_key=api_key.strip())
 
-# Quality မြင့်မားသော Model များကို ဦးစားပေး ခေါ်ယူသည့် Function
+# Quality မြင့်မားပြီး အလုပ်လုပ်နိုင်သော Model များကို စနစ်တကျ ပြင်ဆင်ထားသည့် Function
 def generate_text_content(client, prompt_text):
+    # SDK အသစ်အတွက် models/ prefix ထည့်သွင်းထားသော တည်ငြိမ်သည့် Model များ
     candidates = [
-        'gemini-2.5-pro',
-        'gemini-2.0-pro-exp-02-05',
-        'gemini-1.5-pro',
-        'gemini-2.0-flash',
-        'gemini-1.5-flash'
+        'models/gemini-2.5-pro',
+        'models/gemini-2.5-flash',
+        'models/gemini-2.0-flash',
+        'models/gemini-1.5-pro',
+        'models/gemini-1.5-flash'
     ]
     
     last_err = None
