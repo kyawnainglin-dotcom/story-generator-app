@@ -37,21 +37,17 @@ st.markdown(custom_css, unsafe_allow_html=True)
 def get_genai_client(api_key):
     return genai.Client(api_key=api_key.strip())
 
-# Quality မြင့်မားပြီး အလုပ်လုပ်နိုင်သော Model များကို စနစ်တကျ ပြင်ဆင်ထားသည့် Function
+# Google GenAI SDK အသစ်အတွက် သေချာ ပေါက် အလုပ်လုပ်မည့် Stable Model List
 def generate_text_content(client, prompt_text):
-    # SDK အသစ်အတွက် models/ prefix ထည့်သွင်းထားသော တည်ငြိမ်သည့် Model များ
     candidates = [
-        'models/gemini-2.5-pro',
-        'models/gemini-2.5-flash',
-        'models/gemini-2.0-flash',
-        'models/gemini-1.5-pro',
-        'models/gemini-1.5-flash'
+        'gemini-2.5-pro',
+        'gemini-2.5-flash',
+        'gemini-2.0-flash'
     ]
     
     last_err = None
     for model_name in candidates:
         try:
-            # စာလုံးရေ အရှည်ကြီး ထွက်လာစေရန် max_output_tokens: 8192 သတ်မှတ်ထားပါသည်
             response = client.models.generate_content(
                 model=model_name,
                 contents=prompt_text,
